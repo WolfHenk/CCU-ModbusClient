@@ -1,7 +1,11 @@
 # CCU-ModbusClient 0.3.0
 
-Eigenstaendiger Modbus-TCP-Client fuer CCU/OpenCCU. Die getrennte Software
-CCU-Modbus und ihre Geraete, Daten und Kennungen werden nicht migriert.
+Eigenstaendiger Modbus-TCP-Client fuer CCU/OpenCCU. 
+
+Das Modbus-Protokoll ist ein Kommunikationsprotokoll, das auf einer Client/Server-Architektur basiert. 
+Es wurde 1979 von Gould-Modicon für die Kommunikation mit seinen speicherprogrammierbaren Steuerungen ins Leben gerufen.
+In der Industrie hat sich der Modbus zu einem De-facto-Standard entwickelt, da es sich um ein offenes Protokoll handelt. 
+Seit 2007 ist die Version Modbus/TCP Teil der Norm IEC 61158.
 
 ## Stand und Schutzgrenzen
 

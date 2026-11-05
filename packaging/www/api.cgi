@@ -29,7 +29,8 @@ if {![check_session $sid]} {
  exit 0
 }
 set method [expr {[info exists env(REQUEST_METHOD)] ? $env(REQUEST_METHOD) : "GET"}]
-if {($action eq "read" && $method ne "GET") || ($action eq "write" && $method ne "POST") || ($action ne "read" && $action ne "write")} {
+set allowed [expr {($action eq "read" && $method eq "GET") || (($action eq "write" || $action eq "test_connection" || $action eq "test_register") && $method eq "POST")}]
+if {!$allowed} {
  puts "Status: 405 Method Not Allowed\r\n\r"
  puts {{"ok":false,"error":"Aktion/Methode ungueltig"}}
  exit 0
@@ -62,7 +63,11 @@ if {[catch {
  fconfigure $f -translation binary
  puts -nonewline $f $body
  close $f
- set result [exec $cmd write $config < $tmp]
+ if {$action eq "write"} {
+  set result [exec $cmd write $config < $tmp]
+ } else {
+  set result [exec $cmd $action < $tmp]
+ }
 } err]} {
  catch {close $f}
  catch {file delete -- $tmp}
@@ -72,4 +77,8 @@ if {[catch {
 }
 file delete -- $tmp
 puts "\r"
-puts {{"ok":true,"restart_required":true}}
+if {$action eq "write"} {
+ puts {{"ok":true,"restart_required":true}}
+} else {
+ puts $result
+}

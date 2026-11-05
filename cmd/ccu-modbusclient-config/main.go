@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"github.com/WolfHenk/CCU-ModbusClient/internal/ccurpc"
 	"github.com/WolfHenk/CCU-ModbusClient/internal/config"
+	"github.com/WolfHenk/CCU-ModbusClient/internal/engine"
 	"io"
 	"os"
 	"path/filepath"
@@ -42,6 +43,33 @@ func main() {
 	}
 }
 func run(args []string, stdin io.Reader, stdout io.Writer) error {
+	// Test requests are read-only: only a user-clicked Test button invokes
+	// an isolated Modbus/TCP connection; the service configuration is untouched.
+	if len(args) == 1 && (args[0] == "test_connection" || args[0] == "test_register") {
+		body, err := io.ReadAll(io.LimitReader(stdin, 1048577))
+		if err != nil {
+			return err
+		}
+		if len(body) > 1048576 {
+			return fmt.Errorf("test request exceeds 1 MiB")
+		}
+		var req struct {
+			Device   config.Device   `json:"device"`
+			Register config.Register `json:"register"`
+		}
+		if args[0] == "test_connection" {
+			if err := json.Unmarshal(body, &req.Device); err != nil {
+				return err
+			}
+			result := engine.TestConnection(req.Device)
+			return json.NewEncoder(stdout).Encode(result)
+		}
+		if err := json.Unmarshal(body, &req); err != nil {
+			return err
+		}
+		result := engine.TestRegister(req.Device, req.Register)
+		return json.NewEncoder(stdout).Encode(result)
+	}
 	if len(args) != 2 {
 		return fmt.Errorf("usage: ccu-modbusclient-config read|write /absolute/path/config.json")
 	}

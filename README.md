@@ -1,72 +1,163 @@
-# CCU-ModbusClient 0.3.0
+# CCU-ModbusClient
 
-Eigenstaendiger Modbus-TCP-Client fuer CCU/OpenCCU. 
+**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.0
 
-Das Modbus-Protokoll ist ein Kommunikationsprotokoll, das auf einer Client/Server-Architektur basiert. 
-Es wurde 1979 von Gould-Modicon für die Kommunikation mit seinen speicherprogrammierbaren Steuerungen ins Leben gerufen.
-In der Industrie hat sich der Modbus zu einem De-facto-Standard entwickelt, da es sich um ein offenes Protokoll handelt. 
-Seit 2007 ist die Version Modbus/TCP Teil der Norm IEC 61158.
+Eigenständiges Add-on, das Modbus-TCP-Geräte (z. B. SPS, I/O-Module, Zähler) in eine
+HomeMatic-Zentrale einbindet. Die getrennte Software *CCU-Modbus* sowie deren Geräte, Daten
+und Kennungen werden nicht übernommen.
 
-## Stand und Schutzgrenzen
+| | |
+|---|---|
+| Version | 0.3.0 |
+| Plattformen | Linux AMD64, ARM64, ARMv7 |
+| Lizenz | [CCU-ModbusClient-Lizenz 1.1](LICENSE) – kostenlos, auch gewerblich |
+| Sprache | Go 1.25.14, statisch gebaut |
 
-Version 0.3.0. Vollstaendiger Quellcode, Tests, Dokumentation und
-plattformuebergreifende Binaries liegen in diesem Repository bzw. den
-Release-Archiven vor. Der Bau und die lokalen Tests sind getrennt von einem
-vollstaendigen nativen Installationstest auf einer OpenCCU zu bewerten.
-Keine ungepruefte Installation auf produktiven CCU-Systemen.
+---
 
-## Lizenz
+## Was ist Modbus?
 
-CCU-ModbusClient-Lizenz fuer kostenfreie Nutzung und Weitergabe, Version 1.1
-(siehe [LICENSE](LICENSE)). Private und gewerbliche Nutzung erlaubt.
-Software und weitergegebene Aenderungen duerfen nur kostenlos und mit
-vollstaendigem zugehoerigen Quellcode unter denselben Bedingungen
-weitergegeben werden. Entgeltliche eigenstaendige Arbeitsleistungen und
-Hardware sind zulaessig, ohne Softwareaufschlaege. Drittanbieterhinweise:
-[THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) und [third_party/licenses](third_party/licenses).
+Modbus ist ein Kommunikationsprotokoll nach dem Client/Server-Prinzip. Gould-Modicon entwickelte es
+1979 für seine speicherprogrammierbaren Steuerungen. Weil die Spezifikation offen zugänglich
+ist, wurde Modbus in der Industrie zum De-facto-Standard. Die TCP/IP-Variante Modbus/TCP ist
+seit 2007 Bestandteil der Feldbusnorm IEC 61158.
 
-## Vollstaendiger Quellcode
+Heute ist Modbus weit verbreitet in Solaranlagen und Wechselrichtern, Klimaanlagen, Heizungen
+und Wärmepumpen.
 
-Quellen unter `cmd/`, `internal/`, `packaging/`; Go-Moduldateien
-`go.mod`, `go.sum`; `Makefile` und `VERSION`, alle Tests und
-Konfigurationsvorlage `packaging/examples/config.json`. Die genauen
-Abhaengigkeitsversionen stehen in `go.mod` und `go.sum`.
-Fremdlizenzen liegen unter `third_party/licenses/`. Die eigenstaendige
-Bezugsdatei `releases/CCU-ModbusClient-0.3.0-SOURCE.tar.gz`
-enthaelt diese Dateien gemeinsam mit dem Lizenztext.
+**Client und Server statt Master und Slave:** Andere Bussysteme sprechen von *Master* (der
+steuernde Rechner) und *Slave* (die gesteuerte Baugruppe). Bei Modbus heißt die steuernde
+Rechnereinheit **Client**, das angesprochene Gerät **Server**. Die CCU mit CCU-ModbusClient ist
+also der Client; Wechselrichter, Wärmepumpe oder I/O-Modul sind die Server.
 
-## Bauanleitung (Linux)
+**CCU-ModbusClient ist damit ein Zusatz zur CCU, der ihr ermöglicht, Modbus-Server
+anzusprechen, Daten von ihnen zu lesen und Daten an sie zu schreiben.**
 
-Voraussetzungen: Go 1.25.14, GNU make, Node.js und POSIX shell.
-Den Beispielpfad zum Go-Compiler durch den eigenen Installationspfad ersetzen.
-Benoetigte Go-Module lassen sich gemaess `go.mod` und `go.sum` beziehen.
-Im Projektverzeichnis:
+Dabei wurde Wert darauf gelegt, dass in der CCU alles wie ein ganz normales Gerät aussieht:
+Schaltaktoren, Kontakte und Messwerte erscheinen mit Kanälen und Datenpunkten wie bei
+HomeMatic-Geräten und lassen sich in Programmen und Skripten wie gewohnt verwenden. Die Übersetzung in die Modbus-Sichtweise geschieht vollständig im
+CCU-ModbusClient-System.
+
+---
+
+## Modbus-Begriffe einfach erklärt
+
+Ein Modbus-Server stellt seine Daten in vier Bereichen bereit. Jeder Wert hat eine
+**Adresse** (eine Nummer), über die der Client ihn anspricht.
+
+| Begriff | Größe | Lesen | Schreiben | Vorstellung | Beispiel |
+|---|---|:---:|:---:|---|---|
+| **Coil** | 1 Bit (ein/aus) | ✅ | ✅ | Schalter, den man umlegen kann | Relaisausgang, Pumpe ein/aus |
+| **Discrete Input** | 1 Bit (ein/aus) | ✅ | – | Kontrolllampe, die man nur ablesen kann | Türkontakt, Störmeldung |
+| **Input Register** | 16 Bit (Zahl) | ✅ | – | Anzeige, die man nur ablesen kann | gemessene Temperatur, Leistung |
+| **Holding Register** | 16 Bit (Zahl) | ✅ | ✅ | Einstellrad, das man ablesen und verstellen kann | Sollwert, Betriebsart |
+
+Weitere Begriffe:
+
+- **Unit-ID** – Nummer des Geräts hinter einer IP-Adresse. Meist 1; wichtig, wenn ein Gateway
+  mehrere Geräte bedient.
+- **Datentyp** – ein Register fasst 16 Bit, also Zahlen von 0 bis 65535 (`uint16`) oder
+  −32768 bis 32767 (`int16`). Größere Zahlen und Kommazahlen (`int32`, `uint32`, `float32`)
+  belegen zwei Register hintereinander.
+- **Faktor und Offset** – viele Geräte liefern ganze Zahlen, z. B. `215` für 21,5 °C. Mit
+  Faktor `0.1` rechnet CCU-ModbusClient daraus den richtigen Wert.
+- **Byte- und Wortreihenfolge** – Hersteller legen die Teile einer Zahl unterschiedlich ab.
+  Zeigt ein Wert Unsinn, hilft meist das Tauschen der Bytes oder der Worte (`byte_swap`,
+  `word_swap`).
+- **Abfrageintervall** – wie oft (in Sekunden) ein Wert vom Gerät gelesen wird.
+
+Welche Adressen, Datentypen und Faktoren ein Gerät verwendet, steht in seiner
+Modbus-Dokumentation (oft „Registerliste“ oder „Modbus-Map“ genannt).
+
+---
+
+## Lizenz in Kürze
+
+- ✅ Private und gewerbliche Nutzung erlaubt
+- ✅ Ändern und Weitergeben erlaubt – **nur kostenlos**, mit vollständigem Quellcode und unter
+  denselben Bedingungen
+- ✅ Arbeitsleistung (Installation, Einrichtung, Support) und Hardware dürfen berechnet werden
+- ❌ Kein Entgelt für die Software selbst, auch kein Aufschlag auf Preise oder Stundensätze
+
+Maßgeblich ist der vollständige Text in [LICENSE](LICENSE).
+Rechte Dritter: [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) und [third_party/licenses](third_party/licenses).
+
+---
+
+## Projektstand
+
+> **⚠️ Hinweis:** Bau und lokale Tests ersetzen keinen Installationstest auf einer echten
+> OpenCCU. Nicht ungeprüft auf produktiven CCU-Systemen installieren.
+
+Quellcode, Tests, Dokumentation und Binaries für alle Plattformen liegen in diesem Repository
+bzw. in den Release-Archiven.
+
+---
+
+## Quellcode
+
+| Pfad | Inhalt |
+|---|---|
+| `cmd/` | Programme: Daemon `ccu-modbusclientd`, Werkzeug `ccu-modbusclient-config` |
+| `internal/` | Programmbibliotheken und Tests |
+| `packaging/` | WebUI, Skripte, Startdatei, Konfigurationsvorlage `examples/config.json` |
+| `go.mod`, `go.sum` | Abhängigkeiten mit genauen Versionen |
+| `Makefile`, `VERSION` | Bau und Versionsnummer |
+| `third_party/licenses/` | Lizenztexte der Fremdbibliotheken |
+
+---
+
+## Bauen (Linux)
+
+**Voraussetzungen:** Go 1.25.14, GNU make, Node.js, POSIX-Shell.
+
+Im Projektverzeichnis, mit dem eigenen Pfad zum Go-Compiler:
 
 ```sh
-make GO=/pfad/zur/go1.25.14/bin/go test
-make GO=/pfad/zur/go1.25.14/bin/go build
-make GO=/pfad/zur/go1.25.14/bin/go package
+make GO=/pfad/zur/go1.25.14/bin/go test      # Tests
+make GO=/pfad/zur/go1.25.14/bin/go build     # Binaries
+make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 ```
 
-`make build` baut je zwei Linux-Binaries (Daemon und Konfigurationswerkzeug)
-fuer AMD64, ARM64 und ARMv7. Alle Binaries sind mit `CGO_ENABLED=0`
-und `-trimpath` erstellt. `make package` prueft die Quellen und erstellt
-ein Installationsarchiv sowie ein gesondertes Quellarchiv. Das
-Installationsarchiv fuehrt Quellen unter `source/` mit und stellt
-drittlizenzierte Bestandteile mit allen Texten bereit.
+- `make build` erzeugt Daemon und Konfigurationswerkzeug für AMD64, ARM64 und ARMv7
+  (`CGO_ENABLED=0`, `-trimpath`).
+- `make package` prüft die Quellen und erstellt beide Archive.
+- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.0`.
 
-Zur Verifizierung: `ccu-modbusclientd -version` und
-`ccu-modbusclient-config -version` geben `0.3.0` aus.
-Fuer die CCU muss die passende Architektur gewaehlt werden.
+---
 
-## Paket und Installation
+## Pakete
 
-`build/CCU-ModbusClient-0.3.0-INSTALL.tar.gz` beinhaltet Binaries, WebUI,
-Skripte, Konfigurationsvorlage, vollstaendigen Projektquellcode, README,
-Lizenz und Drittanbieterlizenzen. `build/CCU-ModbusClient-0.3.0-SOURCE.tar.gz`
-liefert die relevanten Quellen mit Bauanleitung gesondert.
+| Archiv | Inhalt |
+|---|---|
+| `CCU-ModbusClient-0.3.0-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
+| `CCU-ModbusClient-0.3.0-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
 
-Das Installationsskript erfordert eine kontrollierte OpenCCU-Umgebung.
-Die native Ende-zu-Ende-Abnahme umfasst WebUI-Sitzung, ReGa-Integration,
-Konfiguration, Schreibpfade und Installations-/Deinstallationsablauf.
+Fertige Archive liegen unter `releases/`, selbst gebaute unter `build/`.
+
+---
+
+## Installation
+
+Installation als Zusatzsoftware über die WebUI der OpenCCU; die passende Architektur wählen.
+
+Vollständig abgenommen ist eine Installation erst nach Prüfung von:
+
+- WebUI-Sitzung und Konfiguration
+- ReGa-Integration
+- Schreibpfaden zu den Modbus-Geräten
+- Installation und Deinstallation
+
 Ein erfolgreicher Build allein ist kein Nachweis dieser Abnahme.
+
+---
+
+## Marken
+
+Modbus ist eine Marke der jeweiligen Rechteinhaber. HomeMatic, CCU und OpenCCU sind Marken bzw.
+Bezeichnungen ihrer jeweiligen Inhaber. Dieses Projekt ist von ihnen weder zertifiziert noch
+unterstützt.
+
+---
+
+© 2026 Wolfram Henkel

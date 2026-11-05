@@ -1,0 +1,144 @@
+#!/bin/sh
+# -----------------------------------------------------------------------------
+# Projekt:      CCU-ModbusClient
+# Datei:        packaging/bin/register_devtype
+# Ersteller:    Wolfram Henkel
+# Datum:        05. Nov. 2026
+# Version:      0.3.0
+#
+# Copyright (c) 2026 Wolfram Henkel.
+#
+# Lizenz:       CCU-ModbusClient-Lizenz für kostenfreie Nutzung und
+#               Weitergabe, Version 1.1.
+#
+# Private und gewerbliche Nutzung sind erlaubt.
+# Die Software und Änderungen dürfen nur kostenlos unter
+# derselben Lizenz und mit vollständigem Quellcode weitergegeben werden.
+#
+# Vollständiger Lizenztext: LICENSE
+# -----------------------------------------------------------------------------
+
+# Overlay only our virtual-device type "Modbus" (case-sensitive).
+# CCU-Modbus Server uses "ModBus", so neither its device type nor its
+# images are replaced. Native OpenCCU files remain untouched on disk.
+set -eu
+MODE="${1:-install}"
+TARGET=/www/config/devdescr/DEVDB.tcl
+WEBUI_TARGET=/www/webui/webui.js
+JS_TARGET=/www/devdescr.js
+BASE=/usr/local/addons/ccu-modbusclient/devdescr
+OVERLAY=$BASE/DEVDB.tcl
+WEBUI_OVERLAY=$BASE/webui.js
+JS_OVERLAY=$BASE/devdescr.js
+TCL_MARKER='CCU-ModbusClient runtime device description'
+JS_MARKER='CCU-ModbusClient runtime device type'
+IMAGE_SMALL='/addons/ccu-modbusclient/img/modbus-logo-50.png'
+IMAGE_LARGE='/addons/ccu-modbusclient/img/modbus-logo-250.png'
+
+mounted() {
+    grep -F " $1 " /proc/mounts >/dev/null 2>&1
+}
+# Never unmount a foreign add-on overlay (or a native CCU mount).
+unmount_own() {
+    _target="$1"
+    _marker="$2"
+    if mounted "$_target"; then
+        if [ -f "$_target" ] && grep -F "$_marker" "$_target" >/dev/null 2>&1; then
+            umount "$_target"
+        else
+            echo "Refusing to unmount a foreign overlay: $_target" >&2
+            return 1
+        fi
+    fi
+}
+remove_ours() {
+    unmount_own "$WEBUI_TARGET" "$JS_MARKER"
+    unmount_own "$JS_TARGET" "$TCL_MARKER"
+    unmount_own "$TARGET" "$TCL_MARKER"
+}
+case "$MODE" in
+  install)
+    mkdir -p "$BASE"
+    chmod 755 "$BASE"
+    # Drop our old mounts, if any. Foreign mounts below ours remain intact.
+    remove_ours
+    if [ -f "$TARGET" ]; then
+      cp -f "$TARGET" "$OVERLAY"
+      cat >>"$OVERLAY" <<'TCL'
+
+# CCU-ModbusClient runtime device description
+if {[lsearch -exact $DEV_LIST "Modbus"] < 0} {
+    lappend DEV_LIST "Modbus"
+}
+set DEV_DESCRIPTION(Modbus) "ModbusClient-Gerät"
+set DEV_PATHS(Modbus) [list \
+    [list 50 "/addons/ccu-modbusclient/img/modbus-logo-50.png"] \
+    [list 250 "/addons/ccu-modbusclient/img/modbus-logo-250.png"]]
+set DEV_HIGHLIGHT(Modbus) {}
+TCL
+      chmod 644 "$OVERLAY"
+      OVERLAY="$OVERLAY" /usr/bin/tclsh <<'TCL'
+source $::env(OVERLAY)
+if {[llength [info commands DEV_getImagePath]] != 1} { exit 10 }
+if {[lsearch -exact $DEV_LIST "Modbus"] < 0} { exit 11 }
+if {[DEV_getImagePath "Modbus" 50] ne "/addons/ccu-modbusclient/img/modbus-logo-50.png"} { exit 12 }
+if {[DEV_getImagePath "Modbus" 250] ne "/addons/ccu-modbusclient/img/modbus-logo-250.png"} { exit 13 }
+TCL
+    fi
+    # Not all OpenCCU versions have devdescr.js.
+    if [ -f "$JS_TARGET" ]; then
+      cp -f "$JS_TARGET" "$JS_OVERLAY"
+      cat >>"$JS_OVERLAY" <<'JS'
+
+// CCU-ModbusClient runtime device description
+if (typeof DEV_LIST !== "undefined" && DEV_LIST.indexOf("Modbus") < 0) DEV_LIST.push("Modbus");
+if (typeof DEV_DESCRIPTION !== "undefined") DEV_DESCRIPTION["Modbus"] = "ModbusClient-Gerät";
+if (typeof DEV_PATHS !== "undefined") {
+  DEV_PATHS["Modbus"] = new Object();
+  DEV_PATHS["Modbus"]["50"] = "/addons/ccu-modbusclient/img/modbus-logo-50.png";
+  DEV_PATHS["Modbus"]["250"] = "/addons/ccu-modbusclient/img/modbus-logo-250.png";
+}
+if (typeof DEV_HIGHLIGHT !== "undefined") DEV_HIGHLIGHT["Modbus"] = new Object();
+JS
+      chmod 644 "$JS_OVERLAY"
+    fi
+    if [ -f "$WEBUI_TARGET" ]; then
+      TMP_WEBUI="$WEBUI_OVERLAY.tmp.$$"
+      trap 'rm -f "$TMP_WEBUI"' EXIT HUP INT TERM
+      awk '
+        !inserted && /^DeviceType = Class.create\(/ {
+          inserted=1
+          print "// CCU-ModbusClient runtime device type"
+          print "if (typeof DEV_LIST !== \"undefined\" && DEV_LIST.indexOf(\"Modbus\") < 0) DEV_LIST.push(\"Modbus\");"
+          print "if (typeof DEV_DESCRIPTION !== \"undefined\") DEV_DESCRIPTION[\"Modbus\"] = \"ModbusClient-Geraet\";"
+          print "if (typeof DEV_PATHS !== \"undefined\") {"
+          print "  DEV_PATHS[\"Modbus\"] = new Object();"
+          print "  DEV_PATHS[\"Modbus\"][\"50\"] = \"/addons/ccu-modbusclient/img/modbus-logo-50.png\";"
+          print "  DEV_PATHS[\"Modbus\"][\"250\"] = \"/addons/ccu-modbusclient/img/modbus-logo-250.png\";"
+          print "}"
+          print "if (typeof DEV_HIGHLIGHT !== \"undefined\") DEV_HIGHLIGHT[\"Modbus\"] = new Object();"
+        }
+        { print }
+      ' "$WEBUI_TARGET" > "$TMP_WEBUI"
+      [ -s "$TMP_WEBUI" ] && grep -F "$JS_MARKER" "$TMP_WEBUI" >/dev/null || {
+        echo "OpenCCU WebUI injection point not found" >&2
+        exit 1
+      }
+      mv "$TMP_WEBUI" "$WEBUI_OVERLAY"
+      chmod 644 "$WEBUI_OVERLAY"
+      trap - EXIT HUP INT TERM
+    fi
+    # Only after all derived files validate, expose them to the WebUI.
+    if [ -f "$TARGET" ]; then mount -o bind "$OVERLAY" "$TARGET"; fi
+    if [ -f "$JS_TARGET" ]; then mount -o bind "$JS_OVERLAY" "$JS_TARGET"; fi
+    if [ -f "$WEBUI_TARGET" ]; then mount -o bind "$WEBUI_OVERLAY" "$WEBUI_TARGET"; fi
+    ;;
+  remove)
+    remove_ours
+    rm -rf "$BASE"
+    ;;
+  *)
+    echo "Usage: register_devtype {install|remove}" >&2
+    exit 2
+    ;;
+esac

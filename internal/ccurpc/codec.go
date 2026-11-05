@@ -92,6 +92,34 @@ func ParseMethodName(r io.Reader) (string, error) {
 }
 
 // writeValue limits recursive nesting to avoid unbounded structures.
+// writeXMLEscaped emits only ASCII bytes on the XML-RPC wire. OpenCCU's
+// ReGa consumers may interpret raw UTF-8 text as Latin-1 even if an HTTP
+// charset is advertised. Numeric XML references are encoding-independent,
+// preserve the exact Unicode unit (e.g. °C), and require no proprietary codec.
+// XML escaping of ASCII '<', '&' etc. is still performed by encoding/xml.
+func writeXMLEscaped(b *bytes.Buffer, s string) error {
+	var ascii strings.Builder
+	flush := func() error {
+		if ascii.Len() == 0 {
+			return nil
+		}
+		err := xml.EscapeText(b, []byte(ascii.String()))
+		ascii.Reset()
+		return err
+	}
+	for _, r := range s {
+		if r <= 127 {
+			ascii.WriteRune(r)
+			continue
+		}
+		if err := flush(); err != nil {
+			return err
+		}
+		fmt.Fprintf(b, "&#x%X;", r)
+	}
+	return flush()
+}
+
 func writeValue(b *bytes.Buffer, v Value, depth int) error {
 	if depth > 32 {
 		return errors.New("XML-RPC nesting exceeds limit")
@@ -100,7 +128,7 @@ func writeValue(b *bytes.Buffer, v Value, depth int) error {
 	switch v.Kind {
 	case "string", "int", "boolean", "double":
 		b.WriteString("<" + v.Kind + ">")
-		if err := xml.EscapeText(b, []byte(v.Text)); err != nil {
+		if err := writeXMLEscaped(b, v.Text); err != nil {
 			return err
 		}
 		b.WriteString("</" + v.Kind + ">")
@@ -121,7 +149,7 @@ func writeValue(b *bytes.Buffer, v Value, depth int) error {
 		sort.Strings(keys)
 		for _, k := range keys {
 			b.WriteString("<member><name>")
-			if err := xml.EscapeText(b, []byte(k)); err != nil {
+			if err := writeXMLEscaped(b, k); err != nil {
 				return err
 			}
 			b.WriteString("</name>")

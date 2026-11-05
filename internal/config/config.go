@@ -67,8 +67,6 @@ type Register struct {
 	Measurement      string  `json:"measurement,omitempty"`
 	TrueMeansOpen    bool    `json:"true_means_open,omitempty"`
 	InvertInput      bool    `json:"invert_input,omitempty"`
-	RoomID           int     `json:"room_id,omitempty"`
-	FunctionID       int     `json:"function_id,omitempty"`
 }
 
 func Load(path string) (*Config, error) {
@@ -309,12 +307,6 @@ func ValidateRegister(r Register) error {
 		if strings.ToLower(r.DataType) == "int64" || strings.ToLower(r.DataType) == "uint64" {
 			return errors.New("64-bit-werte werden noch nicht als spezialisierter Messkanal abgebildet")
 		}
-	}
-	if r.RoomID < 0 {
-		return fmt.Errorf("room_id %d ist ungueltig", r.RoomID)
-	}
-	if r.FunctionID < 0 {
-		return fmt.Errorf("function_id %d ist ungueltig", r.FunctionID)
 	}
 	return nil
 }

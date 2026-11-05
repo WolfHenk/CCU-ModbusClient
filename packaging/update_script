@@ -47,18 +47,29 @@ fi
 mkdir -p "$BASE/bin" "$BASE/www" "$BASE/licenses" "$BASE/lib" "$BASE/source" "$CFGDIR" "$WEBDIR" "$RCDIR"
 cp "$SRC" "$BASE/bin/ccu-modbusclientd"
 chmod 755 "$BASE/bin/ccu-modbusclientd"
-cp -f www/* "$BASE/www/"
+cp -f www/*.cgi www/*.js www/*.css "$BASE/www/"
+mkdir -p "$BASE/www/img"
+cp -f www/img/modbus-logo*.png "$BASE/www/img/"
 cp -f lib/session.tcl "$BASE/lib/"
 cp -f bin/linux-$PLATFORM/ccu-modbusclient-config "$BASE/bin/ccu-modbusclient-config"
 chmod 755 "$BASE/bin/ccu-modbusclient-config"
 chmod 755 "$BASE/www/"*.cgi
 cp -f bin/register_interface "$BASE/bin/register_interface"
 chmod 755 "$BASE/bin/register_interface"
+cp -f bin/register_devtype "$BASE/bin/register_devtype"
+chmod 755 "$BASE/bin/register_devtype"
 cp -f bin/update_addon "$BASE/bin/update_addon"
 chmod 755 "$BASE/bin/update_addon"
 cp -f VERSION LICENSE THIRD_PARTY_NOTICES "$BASE/"
 cp -f licenses/* "$BASE/licenses/"
 cp -R source/. "$BASE/source/"
+# The add-on manager may invoke this installer with umask 077. Explicitly
+# expose only distributable files; NEVER relax the private configuration.
+chmod 755 "$BASE" "$BASE/bin" "$BASE/www" "$BASE/www/img" "$BASE/lib" "$BASE/source" "$BASE/licenses"
+chmod 644 "$BASE/VERSION" "$BASE/LICENSE" "$BASE/THIRD_PARTY_NOTICES" "$BASE/lib/session.tcl"
+chmod 644 "$BASE/www/"*.js "$BASE/www/"*.css
+chmod 644 "$BASE/www/img/"modbus-logo*.png
+chmod -R a+rX "$BASE/source" "$BASE/licenses"
 # Older license texts are obsolete for this installed software version.
 rm -f "$BASE/LICENSE-APACHE-2.0" "$BASE/LICENSE-COMMONS-CLAUSE"
 cp -f rc.d/$ADDON "$RCDIR/$ADDON"

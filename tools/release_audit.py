@@ -32,7 +32,7 @@ ROOT_FILES = ("go.mod", "go.sum", "VERSION", "Makefile", "README.md",
               "LICENSE", "THIRD_PARTY_NOTICES")
 CODE_EXT = (".go", ".js", ".css", ".tcl", ".cgi", ".py")
 OTHER_CODE = ("go.mod", "Makefile", "packaging/bin/register_interface",
-              "packaging/bin/update_addon", "packaging/rc.d/ccu-modbusclient",
+              "packaging/bin/update_addon", "packaging/bin/register_devtype", "packaging/rc.d/ccu-modbusclient",
               "packaging/update_script")
 
 def expected():
@@ -89,7 +89,9 @@ def test_packages(names):
                 "VERSION", "README.md", "THIRD_PARTY_NOTICES", "update_script",
                 "licenses/go-stdlib-LICENSE", "licenses/golang.org-x-net-LICENSE",
                 "licenses/golang.org-x-text-LICENSE", "examples/config.json",
-                "www/index.cgi", "www/app.js", "www/style.css")
+                "www/index.cgi", "www/app.js", "www/style.css",
+                "www/img/modbus-logo.png", "www/img/modbus-logo-50.png",
+                "www/img/modbus-logo-250.png", "bin/register_devtype")
     for name in required:
         assert name in install, f"missing installer file: {name}"
     for arch in ("linux-amd64", "linux-arm64", "linux-arm"):

@@ -1,0 +1,78 @@
+#!/bin/sh
+# -----------------------------------------------------------------------------
+# Projekt:      CCU-ModbusClient
+# Datei:        packaging/update_script
+# Ersteller:    Wolfram Henkel
+# Datum:        05. Nov. 2026
+# Version:      0.3.0
+#
+# Copyright (c) 2026 Wolfram Henkel.
+#
+# Lizenz:       CCU-ModbusClient-Lizenz für kostenfreie Nutzung und
+#               Weitergabe, Version 1.1.
+#
+# Private und gewerbliche Nutzung sind erlaubt.
+# Die Software und Änderungen dürfen nur kostenlos unter
+# derselben Lizenz und mit vollständigem Quellcode weitergegeben werden.
+#
+# Vollständiger Lizenztext: LICENSE
+# -----------------------------------------------------------------------------
+
+set -eu
+ADDON=ccu-modbusclient
+BASE=/usr/local/addons/$ADDON
+CFGDIR=/usr/local/etc/config/addons/$ADDON
+WEBDIR=/usr/local/etc/config/addons/www
+RCDIR=/usr/local/etc/config/rc.d
+[ -f VERSION ] && [ -f LICENSE ] && [ -f source/LICENSE ] && [ -f source/Makefile ] && [ -f examples/config.json ] && [ -f rc.d/$ADDON ] && [ -x bin/update_addon ] || exit 13
+case "$(uname -m)" in
+  aarch64|arm64) PLATFORM=arm64 ;;
+  armv7l) PLATFORM=arm ;;
+  armv6l|arm) echo "ARMv6 is not supported by the ARMv7 build" >&2; exit 13 ;;
+  x86_64|amd64) PLATFORM=amd64 ;;
+  *) exit 13 ;;
+esac
+SRC=bin/linux-$PLATFORM/ccu-modbusclientd
+[ -f "$SRC" ] && [ -f www/index.cgi ] && [ -f www/update-check.cgi ] || exit 13
+if [ -d "$WEBDIR/$ADDON" ] && [ ! -L "$WEBDIR/$ADDON" ]; then
+  echo 'Refusing to replace existing non-symlink web directory' >&2
+  exit 14
+fi
+if [ -f "$RCDIR/$ADDON" ]; then
+  RESULT=0
+  "$RCDIR/$ADDON" stop || exit 14
+else
+  RESULT=10
+fi
+mkdir -p "$BASE/bin" "$BASE/www" "$BASE/licenses" "$BASE/lib" "$BASE/source" "$CFGDIR" "$WEBDIR" "$RCDIR"
+cp "$SRC" "$BASE/bin/ccu-modbusclientd"
+chmod 755 "$BASE/bin/ccu-modbusclientd"
+cp -f www/* "$BASE/www/"
+cp -f lib/session.tcl "$BASE/lib/"
+cp -f bin/linux-$PLATFORM/ccu-modbusclient-config "$BASE/bin/ccu-modbusclient-config"
+chmod 755 "$BASE/bin/ccu-modbusclient-config"
+chmod 755 "$BASE/www/"*.cgi
+cp -f bin/register_interface "$BASE/bin/register_interface"
+chmod 755 "$BASE/bin/register_interface"
+cp -f bin/update_addon "$BASE/bin/update_addon"
+chmod 755 "$BASE/bin/update_addon"
+cp -f VERSION LICENSE THIRD_PARTY_NOTICES "$BASE/"
+cp -f licenses/* "$BASE/licenses/"
+cp -R source/. "$BASE/source/"
+# Older license texts are obsolete for this installed software version.
+rm -f "$BASE/LICENSE-APACHE-2.0" "$BASE/LICENSE-COMMONS-CLAUSE"
+cp -f rc.d/$ADDON "$RCDIR/$ADDON"
+chmod 755 "$RCDIR/$ADDON"
+if [ ! -f "$CFGDIR/config.json" ]; then
+  cp examples/config.json "$CFGDIR/config.json"
+  chmod 600 "$CFGDIR/config.json"
+fi
+ln -sfn "$BASE/www" "$WEBDIR/$ADDON"
+touch /usr/local/etc/config/hm_addons.cfg
+"$BASE/bin/update_addon" "$ADDON" "/addons/$ADDON/index.cgi" "CCU-ModbusClient" "Modbus TCP Client" "Modbus TCP Client" || exit 14
+sync
+"$BASE/bin/register_interface" install || exit 14
+if [ "$RESULT" -eq 0 ] && [ ! -f /etc/init.d/S00InstallAddon ]; then
+  "$RCDIR/$ADDON" start || exit 14
+fi
+exit "$RESULT"

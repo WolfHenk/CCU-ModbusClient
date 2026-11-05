@@ -1,0 +1,38 @@
+CCU-ModbusClient — Third-Party Notices
+=====================================
+
+This program includes code from the following external Go modules:
+
+1. golang.org/x/net, version v0.58.0
+   Copyright 2009 The Go Authors.
+   License: BSD 3-Clause License.
+   Complete license text: third_party/licenses/golang.org-x-net-LICENSE
+   Project: https://pkg.go.dev/golang.org/x/net
+
+2. golang.org/x/text, version v0.41.0
+   Copyright 2009 The Go Authors.
+   License: BSD 3-Clause License.
+   Complete license text: third_party/licenses/golang.org-x-text-LICENSE
+   Project: https://pkg.go.dev/golang.org/x/text
+
+3. Go standard library (Go 1.25.14)
+   Copyright The Go Authors.
+   License: BSD-style license.
+   Complete license text: third_party/licenses/go-stdlib-LICENSE
+   Project: https://go.dev/LICENSE
+
+The independent Modbus TCP protocol implementation does not incorporate
+or redistribute official Modbus specification PDFs or Modbus Toolkit code.
+The Modbus name and any related marks remain subject to their respective
+owners' rights; this software does not claim certification or endorsement
+by the Modbus Organization.
+
+HomeMatic and CCU names are marks of their respective owners, including
+eQ-3 AG; OpenCCU is referenced solely to describe compatibility.
+No trademark rights or endorsement are granted.
+
+Project licensing: CCU-ModbusClient License for Free Use and Distribution
+Version 1.1; see LICENSE.
+
+These notices must accompany redistributed binary packages and source
+archives together with the referenced complete license texts.

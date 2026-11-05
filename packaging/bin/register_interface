@@ -1,0 +1,67 @@
+#!/bin/sh
+# -----------------------------------------------------------------------------
+# Projekt:      CCU-ModbusClient
+# Datei:        packaging/bin/register_interface
+# Ersteller:    Wolfram Henkel
+# Datum:        05. Nov. 2026
+# Version:      0.3.0
+#
+# Copyright (c) 2026 Wolfram Henkel.
+#
+# Lizenz:       CCU-ModbusClient-Lizenz für kostenfreie Nutzung und
+#               Weitergabe, Version 1.1.
+#
+# Private und gewerbliche Nutzung sind erlaubt.
+# Die Software und Änderungen dürfen nur kostenlos unter
+# derselben Lizenz und mit vollständigem Quellcode weitergegeben werden.
+#
+# Vollständiger Lizenztext: LICENSE
+# -----------------------------------------------------------------------------
+
+# Changes only the independently named CCU-ModbusClient interface.
+set -eu
+FILE=${CCU_MODBUSCLIENT_INTERFACES_TEST:-/etc/config/InterfacesList.xml}
+NAME=CCU-ModbusClient
+URL=xmlrpc://127.0.0.1:18702/RPC3
+[ -f "$FILE" ] || { echo 'InterfacesList.xml missing' >&2; exit 1; }
+grep -q '</interfaces>' "$FILE" || { echo 'Malformed interface list' >&2; exit 1; }
+case "${1:-}" in
+ install)
+  if grep -q "<name>$NAME</name>" "$FILE"; then
+   grep -q "<url>$URL</url>" "$FILE" || { echo 'Existing client interface mismatch; manual review' >&2; exit 1; }
+   exit 0
+  fi
+  TMP=$(mktemp "${FILE}.client.XXXXXX") || exit 1
+  trap 'rm -f "$TMP"' EXIT HUP INT TERM
+  chmod "$(stat -c %a "$FILE")" "$TMP"
+  awk -v name="$NAME" -v url="$URL" '
+   /<\/interfaces>/ {
+    print "\t<ipc>"
+    print "\t\t<name>" name "</name>"
+    print "\t\t<url>" url "</url>"
+    print "\t\t<info>" name "</info>"
+    print "\t</ipc>"
+   }
+   {print}
+  ' "$FILE" > "$TMP" || exit 1
+  mv -f "$TMP" "$FILE"
+  ;;
+ remove)
+  grep -q "<name>$NAME</name>" "$FILE" || exit 0
+  TMP=$(mktemp "${FILE}.client.XXXXXX") || exit 1
+  trap 'rm -f "$TMP"' EXIT HUP INT TERM
+  chmod "$(stat -c %a "$FILE")" "$TMP"
+  awk -v name="$NAME" '
+   /<ipc>/ {within=1;block="";skip=0}
+   within {
+    block=block $0 ORS
+    if (index($0,"<name>" name "</name>")>0)skip=1
+    if (/<\/ipc>/){if(!skip)printf "%s",block;within=0;block=""}
+    next
+   }
+   {print}
+  ' "$FILE" > "$TMP" || exit 1
+  mv -f "$TMP" "$FILE"
+  ;;
+ *) echo 'usage: register_interface install|remove' >&2;exit 1 ;;
+esac

@@ -1,0 +1,61 @@
+#!/bin/sh
+# -----------------------------------------------------------------------------
+# Projekt:      CCU-ModbusClient
+# Datei:        packaging/rc.d/ccu-modbusclient
+# Ersteller:    Wolfram Henkel
+# Datum:        05. Nov. 2026
+# Version:      0.3.0
+#
+# Copyright (c) 2026 Wolfram Henkel.
+#
+# Lizenz:       CCU-ModbusClient-Lizenz für kostenfreie Nutzung und
+#               Weitergabe, Version 1.1.
+#
+# Private und gewerbliche Nutzung sind erlaubt.
+# Die Software und Änderungen dürfen nur kostenlos unter
+# derselben Lizenz und mit vollständigem Quellcode weitergegeben werden.
+#
+# Vollständiger Lizenztext: LICENSE
+# -----------------------------------------------------------------------------
+
+ADDON=ccu-modbusclient
+BASE=/usr/local/addons/$ADDON
+CONF=/usr/local/etc/config/addons/$ADDON/config.json
+PIDFILE=/var/run/ccu-modbusclient.pid
+case "$1" in
+  info|info.de|info.en)
+    echo 'Name: CCU-ModbusClient'
+    echo "Version: $(cat "$BASE/VERSION" 2>/dev/null)"
+    echo 'Info: Modbus TCP Client (development review)'
+    echo 'Config-Url: /addons/ccu-modbusclient/index.cgi'
+    echo 'Operations: restart uninstall'
+    ;;
+  init) "$BASE/bin/register_interface" install ;;
+  start)
+    "$BASE/bin/register_interface" install || exit 1
+    [ -x "$BASE/bin/ccu-modbusclientd" ] || exit 1
+    [ -f "$CONF" ] || exit 1
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then exit 0; fi
+    "$BASE/bin/ccu-modbusclientd" -config "$CONF" -check >/dev/null 2>&1 || exit 1
+    "$BASE/bin/ccu-modbusclientd" -config "$CONF" -xmlrpc-listen 127.0.0.1:18702 >/var/log/ccu-modbusclient.log 2>&1 &
+    echo $! > "$PIDFILE"
+    ;;
+  stop)
+    if [ -f "$PIDFILE" ]; then
+      PID=$(cat "$PIDFILE")
+      kill "$PID" 2>/dev/null || true
+      rm -f "$PIDFILE"
+    fi
+    ;;
+  restart) "$0" stop; "$0" start ;;
+  uninstall)
+    "$0" stop
+    "$BASE/bin/update_addon" delete "$ADDON" || exit 1
+    "$BASE/bin/register_interface" remove || exit 1
+    rm -f /usr/local/etc/config/addons/www/$ADDON
+    rm -rf "$BASE"
+    # Persistent config deliberately preserved for user-controlled removal.
+    ;;
+  *) exit 1 ;;
+esac
+exit 0

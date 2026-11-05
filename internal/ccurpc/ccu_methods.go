@@ -1,0 +1,101 @@
+// -----------------------------------------------------------------------------
+// Projekt:      CCU-ModbusClient
+// Datei:        internal/ccurpc/ccu_methods.go
+// Ersteller:    Wolfram Henkel
+// Datum:        05. Nov. 2026
+// Version:      0.3.0
+//
+// Copyright (c) 2026 Wolfram Henkel.
+//
+// Lizenz:       CCU-ModbusClient-Lizenz für kostenfreie Nutzung und
+//               Weitergabe, Version 1.1.
+//
+// Private und gewerbliche Nutzung sind erlaubt.
+// Die Software und Änderungen dürfen nur kostenlos unter
+// derselben Lizenz und mit vollständigem Quellcode weitergegeben werden.
+//
+// Vollständiger Lizenztext: LICENSE
+// -----------------------------------------------------------------------------
+
+package ccurpc
+
+import "fmt"
+
+// DeviceCatalog supplies immutable device descriptions to a future CCU
+// interface adapter. It is intentionally independent of go-hmccu.
+type DeviceCatalog interface {
+	ListDevices() ([]Value, error)
+	DeviceDescription(address string) (Value, error)
+	ParamsetDescription(address, set string) (Value, error)
+	Paramset(address, set string) (Value, error)
+}
+
+// RegisterCCUReadMethods wires the read-only CCU method subset. Device
+// mutation and ReGa registration must be added only after independent tests.
+func RegisterCCUReadMethods(h *Handler, catalog DeviceCatalog) error {
+	if h == nil || catalog == nil {
+		return fmt.Errorf("CCU RPC handler or catalog missing")
+	}
+	specs := []struct {
+		name string
+		fn   Method
+	}{
+		{"listDevices", func(args []Value) (Value, error) {
+			if len(args) != 0 {
+				return Value{}, fmt.Errorf("listDevices expects no arguments")
+			}
+			items, e := catalog.ListDevices()
+			if e != nil {
+				return Value{}, e
+			}
+			return Array(items...), nil
+		}},
+		{"getDeviceDescription", func(args []Value) (Value, error) {
+			if len(args) != 1 || args[0].Kind != "string" {
+				return Value{}, fmt.Errorf("getDeviceDescription expects address")
+			}
+			return catalog.DeviceDescription(args[0].Text)
+		}},
+		{"getParamsetDescription", func(args []Value) (Value, error) {
+			address, set, e := twoStrings(args)
+			if e != nil {
+				return Value{}, e
+			}
+			return catalog.ParamsetDescription(address, set)
+		}},
+		{"getParamset", func(args []Value) (Value, error) {
+			address, set, e := twoStrings(args)
+			if e != nil {
+				return Value{}, e
+			}
+			return catalog.Paramset(address, set)
+		}},
+		{"getLinks", func(args []Value) (Value, error) {
+			if len(args) != 2 || args[0].Kind != "string" || args[1].Kind != "int" {
+				return Value{}, fmt.Errorf("getLinks expects address and integer flags")
+			}
+			if _, err := catalog.DeviceDescription(args[0].Text); err != nil {
+				return Value{}, err
+			}
+			return Array(), nil
+		}},
+		{"setReadyConfig", func(args []Value) (Value, error) {
+			if len(args) > 1 {
+				return Value{}, fmt.Errorf("setReadyConfig expects zero or one argument")
+			}
+			return String(""), nil
+		}},
+	}
+	for _, spec := range specs {
+		if err := h.Register(spec.name, spec.fn); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func twoStrings(args []Value) (string, string, error) {
+	if len(args) != 2 || args[0].Kind != "string" || args[1].Kind != "string" {
+		return "", "", fmt.Errorf("expected address and paramset name")
+	}
+	return args[0].Text, args[1].Text, nil
+}

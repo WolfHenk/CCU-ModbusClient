@@ -1,0 +1,22 @@
+/*
+ * -----------------------------------------------------------------------------
+ * Projekt:      CCU-ModbusClient
+ * Datei:        packaging/www/style.css
+ * Ersteller:    Wolfram Henkel
+ * Datum:        05. Nov. 2026
+ * Version:      0.3.0
+ *
+ * Copyright (c) 2026 Wolfram Henkel.
+ *
+ * Lizenz:       CCU-ModbusClient-Lizenz für kostenfreie Nutzung und
+ *               Weitergabe, Version 1.1.
+ *
+ * Private und gewerbliche Nutzung sind erlaubt.
+ * Die Software und Änderungen dürfen nur kostenlos unter
+ * derselben Lizenz und mit vollständigem Quellcode weitergegeben werden.
+ *
+ * Vollständiger Lizenztext: LICENSE
+ * -----------------------------------------------------------------------------
+ */
+
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#27313d;background:#f1f3f6;font-size:14px}header{background:#192f65;color:#fff;padding:14px 26px;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font-size:19px;font-weight:bold}.brand span{color:#8da8d5;margin:0 9px}.header-actions{display:flex;gap:14px;align-items:center}#status{color:#dce6f4;font-size:12px}main{max-width:1100px;margin:0 auto;padding:24px 22px}.page-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.page-heading h1{font-size:24px;margin:0 0 5px}.page-heading p{margin:0;color:#657180}.version{font-size:12px;color:#657180}.notice{background:#e5edf8;border-left:3px solid #4674b5;padding:12px 16px;margin-bottom:20px;color:#34465b}.panel{background:#fff;border:1px solid #d4dbe4;border-radius:5px;margin-bottom:18px;overflow:hidden}.panel-title{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#e5e9ee;border-bottom:1px solid #d4dbe4;gap:12px}.panel-title h2{font-size:17px;margin:0;color:#243c60}.panel-content{padding:20px}.buttons{display:flex;gap:8px;flex-wrap:wrap}button{border:1px solid #adb9c8;border-radius:4px;padding:9px 13px;background:#fff;color:#254269;font:inherit;cursor:pointer}button:active{background:#dae6f5}button.primary{background:#3265aa;color:#fff;border-color:#3265aa;font-weight:bold}.danger{color:#9a3f3f}.fieldgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:14px 0 18px}.fieldgrid .wide{grid-column:span 2}label{display:block;font-size:12px;font-weight:bold;color:#566374}label input:not([type=checkbox]),label select{display:block;width:100%;height:37px;border:1px solid #bcc8d6;border-radius:4px;background:white;padding:7px 9px;margin-top:6px;font-size:14px;color:#263442}label.full{max-width:100%}label.full select{max-width:100%}label.toggle{display:flex;align-items:center;gap:9px;font-size:13px}input[type=checkbox]{width:17px;height:17px;accent-color:#3265aa}h3{font-size:14px;color:#354b65;border-bottom:1px solid #e1e5eb;padding-bottom:10px;margin:22px 0 12px}details{border-top:1px solid #e4e8ee;margin-top:16px;padding-top:15px}summary{cursor:pointer;color:#3265aa;font-weight:bold}.detail-fields{margin-top:17px}.checks{display:flex;flex-wrap:wrap;gap:12px 23px;padding:4px 0 10px}.checks label{display:flex;align-items:center;gap:7px}#message:not(:empty){background:#ecf3fa;padding:13px 16px;margin-bottom:15px;border:1px solid #bed1e7}footer{font-size:12px;color:#8a95a3;padding:8px 2px 30px}@media(max-width:760px){header{padding:12px 15px;align-items:flex-start;flex-direction:column}main{padding:14px 12px}.panel-title{align-items:flex-start;flex-direction:column}.fieldgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.fieldgrid .wide{grid-column:span 2}.version{display:none}}@media(max-width:450px){.fieldgrid{grid-template-columns:1fr}.fieldgrid .wide{grid-column:span 1}.header-actions{flex-wrap:wrap}}

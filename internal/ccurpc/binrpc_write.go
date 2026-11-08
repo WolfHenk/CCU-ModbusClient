@@ -35,23 +35,26 @@ type WriteQueue interface {
 	EnqueueNumeric(deviceID, registerID string, value float64) bool
 }
 
-// RegisterBinRPCWrites adds a strictly validated setValue endpoint.
-// Success confirms enqueueing only, not a completed Modbus transaction.
-func RegisterBinRPCWrites(server *ccubinrpc.TCPServer, cfg *config.Config, queue WriteQueue) error {
-	if server == nil || cfg == nil || queue == nil {
-		return errors.New("missing write endpoint prerequisites")
+// writeRoute is the shared, read-only CCU datapoint-to-Modbus register map.
+type writeRoute struct{ device, register, kind string }
+
+// buildWriteRoutes uses identical write permissions and channel numbering for
+// BIN-RPC and XML-RPC. Input and disabled datapoints are never writable.
+func buildWriteRoutes(cfg *config.Config) (map[string]writeRoute, error) {
+	if cfg == nil {
+		return nil, errors.New("missing write configuration")
 	}
-	routes := map[string]struct{ device, register, kind string }{}
+	routes := make(map[string]writeRoute)
 	for _, d := range cfg.Devices {
 		if !d.Enabled {
 			continue
 		}
 		serial, e := ClientSerial(d.Host, d.Port, d.UnitID)
 		if e != nil {
-			return e
+			return nil, e
 		}
 		if d.CCUAddress != "" && !IsClientSerialForEndpoint(d.CCUAddress, serial) {
-			return fmt.Errorf("device %s requires identity migration", d.ID)
+			return nil, fmt.Errorf("device %s requires identity migration", d.ID)
 		}
 		serial = normalizedClientSerial(d.CCUAddress, serial)
 		idx := 1
@@ -69,16 +72,29 @@ func RegisterBinRPCWrites(server *ccubinrpc.TCPServer, cfg *config.Config, queue
 		}
 		for _, r := range binary {
 			if r.Type == "coil" && r.CoilDirection != "input" {
-				routes[fmt.Sprintf("%s:%d.STATE", serial, idx)] = struct{ device, register, kind string }{d.ID, r.ID, "bool"}
+				routes[fmt.Sprintf("%s:%d.STATE", serial, idx)] = writeRoute{d.ID, r.ID, "bool"}
 			}
 			idx++
 		}
 		for _, r := range numeric {
 			if r.Type == "holding" && r.NumericDirection == "output" && r.DataType != "uint64" && r.DataType != "int64" {
-				routes[fmt.Sprintf("%s:%d.VALUE", serial, idx)] = struct{ device, register, kind string }{d.ID, r.ID, "numeric"}
+				routes[fmt.Sprintf("%s:%d.VALUE", serial, idx)] = writeRoute{d.ID, r.ID, "numeric"}
 			}
 			idx++
 		}
+	}
+	return routes, nil
+}
+
+// RegisterBinRPCWrites adds a strictly validated setValue endpoint.
+// Success confirms enqueueing only, not a completed Modbus transaction.
+func RegisterBinRPCWrites(server *ccubinrpc.TCPServer, cfg *config.Config, queue WriteQueue) error {
+	if server == nil || cfg == nil || queue == nil {
+		return errors.New("missing write endpoint prerequisites")
+	}
+	routes, err := buildWriteRoutes(cfg)
+	if err != nil {
+		return err
 	}
 	return server.Register("setValue", func(args []ccubinrpc.Parameter) (ccubinrpc.Parameter, error) {
 		if len(args) != 3 || args[0].Type != ccubinrpc.TypeString || args[1].Type != ccubinrpc.TypeString {

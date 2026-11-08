@@ -58,6 +58,9 @@ func serveXMLRPC(ctx context.Context, path, addr string) error {
 	if err := ccurpc.RegisterCCUReadMethods(handler, catalog); err != nil {
 		return err
 	}
+	if err := ccurpc.RegisterXMLRPCWrites(handler, cfg, eng); err != nil {
+		return err
+	}
 	queue, err := ccurpc.NewEventQueue(1024)
 	if err != nil {
 		return err

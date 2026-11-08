@@ -21,11 +21,19 @@ package ccurpc
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
 )
+
+// clientRPCFault marks only deliberately safe, short validation messages for
+// transmission to ReGa. Unexpected internal errors remain redacted.
+type clientRPCFault struct{ message string }
+
+func (e clientRPCFault) Error() string   { return e.message }
+func rpcInputError(message string) error { return clientRPCFault{message: message} }
 
 // Method is a locally registered XML-RPC procedure.
 type Method func([]Value) (Value, error)
@@ -76,7 +84,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := fn(args)
 	if err != nil {
-		sendRPCFault(w, -32500, "RPC method failed")
+		var known clientRPCFault
+		if errors.As(err, &known) {
+			sendRPCFault(w, -32500, known.message)
+		} else {
+			sendRPCFault(w, -32500, "RPC method failed")
+		}
 		return
 	}
 	wire, err := MarshalResponse(result)

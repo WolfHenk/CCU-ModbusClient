@@ -19,7 +19,10 @@
 
 package ccurpc
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // DeviceCatalog supplies immutable device descriptions to a future CCU
 // interface adapter. It is intentionally independent of go-hmccu.
@@ -69,6 +72,35 @@ func RegisterCCUReadMethods(h *Handler, catalog DeviceCatalog) error {
 				return Value{}, e
 			}
 			return catalog.Paramset(address, set)
+		}},
+		{"getValue", func(args []Value) (Value, error) {
+			address, key, e := twoStrings(args)
+			if e != nil {
+				return Value{}, rpcInputError("getValue requires channel address and datapoint name")
+			}
+			meta, e := catalog.ParamsetDescription(address, "VALUES")
+			if e != nil {
+				return Value{}, rpcInputError("unknown channel")
+			}
+			entry, found := meta.Members[key]
+			if !found {
+				return Value{}, rpcInputError("unknown datapoint")
+			}
+			operations, e := strconv.Atoi(entry.Members["OPERATIONS"].Text)
+			if entry.Kind != "struct" || e != nil || operations&1 == 0 {
+				return Value{}, rpcInputError("datapoint not readable")
+			}
+			// Use the same freshly updated cache as getParamset/events. No
+			// additional Modbus read or device state mutation is performed.
+			values, e := catalog.Paramset(address, "VALUES")
+			if e != nil {
+				return Value{}, e
+			}
+			value, ok := values.Members[key]
+			if !ok {
+				return Value{}, rpcInputError("unknown datapoint")
+			}
+			return value, nil
 		}},
 		{"getLinks", func(args []Value) (Value, error) {
 			if len(args) != 2 || args[0].Kind != "string" || args[1].Kind != "int" {

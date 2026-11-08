@@ -1,6 +1,6 @@
 # CCU-ModbusClient
 
-**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.0
+**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.1
 
 Eigenständiges Add-on, das Modbus-TCP-Geräte (z. B. SPS, I/O-Module, Zähler) in eine
 HomeMatic-Zentrale einbindet. Die getrennte Software *CCU-Modbus* sowie deren Geräte, Daten
@@ -8,7 +8,7 @@ und Kennungen werden nicht übernommen.
 
 | | |
 |---|---|
-| Version | 0.3.0 |
+| Version | 0.3.1 |
 | Plattformen | Linux AMD64, ARM64, ARMv7 |
 | Lizenz | [CCU-ModbusClient-Lizenz 1.1](LICENSE) – kostenlos, auch gewerblich |
 | Sprache | Go 1.25.14, statisch gebaut |
@@ -84,6 +84,25 @@ Rechte Dritter: [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) und [third_party/lice
 
 ---
 
+## Änderungen in 0.3.1
+
+- **XML-RPC `setValue`**: Schreibzugriffe der CCU auf schaltbare Coils und
+  schreibbare Holding-Register gelangen jetzt über die tatsächlich registrierte
+  XML-RPC-Schnittstelle `/RPC3` in die Modbus-Schreibwarteschlange.
+- **XML-RPC `getValue`**: ReGa und CCU-Skripte können einzelne Werte gezielt
+  abfragen. Zurückgegeben wird der letzte gültige Wert aus dem periodisch
+  aktualisierten Wertecache; die Abfrage löst keinen zusätzlichen Modbus-Lesevorgang aus.
+  Eingänge und 64-Bit-Zahlen bleiben lesbar (64 Bit als Dezimaltext).
+- **Fehlertexte**: Abgelehnte Schreibversuche melden erkennbare Eingabefehler,
+  unbekannte und schreibgeschützte Datenpunkte. Unbekannte interne Fehler werden
+  weiterhin nicht preisgegeben.
+- **Bedeutung eines erfolgreichen Schreibaufrufs**: Er bestätigt die Aufnahme
+  in die Schreibwarteschlange, **nicht** schon die erfolgreiche Modbus-Quittung.
+- Bewährte Geräteadressen und die getrennte Konfiguration des bisherigen
+  CCU-Modbus bleiben unverändert.
+
+---
+
 ## Projektstand
 
 > **⚠️ Hinweis:** Bau und lokale Tests ersetzen keinen Installationstest auf einer echten
@@ -122,7 +141,7 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 - `make build` erzeugt Daemon und Konfigurationswerkzeug für AMD64, ARM64 und ARMv7
   (`CGO_ENABLED=0`, `-trimpath`).
 - `make package` prüft die Quellen und erstellt beide Archive.
-- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.0`.
+- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.1`.
 
 ---
 
@@ -130,8 +149,8 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 
 | Archiv | Inhalt |
 |---|---|
-| `CCU-ModbusClient-0.3.0-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
-| `CCU-ModbusClient-0.3.0-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
+| `CCU-ModbusClient-0.3.1-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
+| `CCU-ModbusClient-0.3.1-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
 
 Fertige Archive liegen unter `releases/`, selbst gebaute unter `build/`.
 

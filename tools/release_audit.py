@@ -24,9 +24,10 @@ import argparse
 import hashlib
 import tarfile
 import sys
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "0.3.0"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 FOLDERS = ("cmd", "internal", "packaging", "tools", "third_party")
 ROOT_FILES = ("go.mod", "go.sum", "VERSION", "Makefile", "README.md",
               "LICENSE", "THIRD_PARTY_NOTICES")
@@ -55,7 +56,15 @@ def test_sources(names):
         lines = p.read_text(encoding="utf-8").splitlines()
         assert any("Projekt:      CCU-ModbusClient" in s for s in lines[:6]), f"missing project header: {name}"
         assert f"Datei:        {name}" in "\n".join(lines[:9]), f"wrong file name: {name}"
-        assert "Version:      0.3.0" in "\n".join(lines[:9]), f"wrong version: {name}"
+        # A file's header records its introduction/revision version, which may
+        # legitimately predate the release without making the file invalid.
+        version_lines = [line for line in lines[:10] if "Version:" in line]
+        assert len(version_lines) == 1, f"missing/duplicate version header: {name}"
+        match = re.search(r"Version:\s+(\d+)\.(\d+)\.(\d+)", version_lines[0])
+        assert match, f"invalid version header: {name}"
+        file_version = tuple(int(x) for x in match.groups())
+        release_version = tuple(int(x) for x in VERSION.split("."))
+        assert (0, 3, 0) <= file_version <= release_version, f"wrong version: {name}"
         if lines[0].startswith("#!"):
             assert "CCU-ModbusClient" in "\n".join(lines[1:5]), f"shebang header missing: {name}"
         headers += 1

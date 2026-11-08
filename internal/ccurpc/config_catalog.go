@@ -80,46 +80,33 @@ func CatalogFromConfig(cfg *config.Config) (*MemoryCatalog, error) {
 			channels = append(channels, Channel{Address: fmt.Sprintf("%s:%d", address, idx), Type: typ, Points: []Point{{ID: "STATE", Type: "BOOL", Value: Boolean(false), Read: true, Write: writable, Event: true, Flags: 1, Control: control, Default: boolValue(false), Minimum: boolValue(false), Maximum: boolValue(true)}, InstallTestPoint()}})
 		}
 		for _, r := range numericRegs {
-			var dtype string
-			switch strings.ToLower(r.DataType) {
-			case "uint64", "int64":
-				dtype = "STRING"
-			default:
-				dtype = "FLOAT"
-			}
-			out := r.Type == "holding" && r.NumericDirection == "output" && dtype == "FLOAT"
-			typ := "ANALOG_INPUT_TRANSMITTER"
-			key := "VOLTAGE"
-			if dtype == "STRING" || (r.Measurement != "" && r.Measurement != "generic") {
-				key = "VALUE"
-			}
-			if out {
-				typ = "MODBUS_NUMERIC_OUTPUT"
-				key = "VALUE"
-			}
-			point := Point{ID: key, Type: dtype, Unit: r.Unit, Value: String(""), Read: true, Write: out, Event: true, Flags: 1}
-			if dtype == "STRING" {
+			nc := numericChannelFor(r)
+			point := Point{ID: nc.Key, Type: nc.DataType, Unit: r.Unit, Value: String(""), Read: true, Write: nc.Writable, Event: true, Flags: 1}
+			switch nc.DataType {
+			case "STRING":
 				point.Default = stringValue("")
 				point.Minimum = stringValue("")
 				point.Maximum = stringValue("")
-			}
-			if dtype == "FLOAT" {
+			case "INTEGER":
+				point.Value = Integer(0)
+				point.Control = "NONE"
+				point.Default = intValue(0)
+				point.Minimum = intValue(0)
+				point.Maximum = intValue(100)
+			case "FLOAT":
 				point.Value = Value{Kind: "double", Text: "0"}
-				point.Control = "ANALOG_INPUT.VOLTAGE"
-				if key == "VALUE" {
-					point.Control = "NONE"
-				}
+				point.Control = "NONE"
 				point.Default = doubleValue(0)
 				point.Minimum = doubleValue(-1000000000)
 				point.Maximum = doubleValue(1000000000)
-				if out {
+				if nc.Writable {
 					if low, high, valid := outputDisplayRange(r); valid {
 						point.Minimum = doubleValue(low)
 						point.Maximum = doubleValue(high)
 					}
 				}
 			}
-			ch := Channel{Address: fmt.Sprintf("%s:%d", address, len(channels)), Type: typ, Points: []Point{point}}
+			ch := Channel{Address: fmt.Sprintf("%s:%d", address, len(channels)), Type: nc.Type, Points: []Point{point}}
 			channels = append(channels, ch)
 		}
 		if err := result.AddDevice(Device{Address: address, Type: "Modbus", Channels: channels}); err != nil {
@@ -127,6 +114,46 @@ func CatalogFromConfig(cfg *config.Config) (*MemoryCatalog, error) {
 		}
 	}
 	return result, nil
+}
+
+// numericChannel describes how a numeric register appears in the CCU.
+type numericChannel struct {
+	Type, Key, DataType string
+	Writable            bool
+}
+
+// numericChannelFor maps a numeric register to an existing CCU channel type
+// whose data point already carries a WebUI label, so no WebUI file has to be
+// overlaid. Readable values ("Ist") follow the configured measurement; every
+// writable value ("Soll") uses ANALOG_OUTPUT_TRANSCEIVER.LEVEL ("Ausgangspegel")
+// with the configured unit. BIN-RPC/XML-RPC writes, events and the catalog all
+// use this single mapping.
+func numericChannelFor(r config.Register) numericChannel {
+	switch strings.ToLower(r.DataType) {
+	case "uint64", "int64":
+		return numericChannel{"DIGITAL_ANALOG_INPUT", "VALUE", "STRING", false}
+	}
+	if r.Type == "holding" && r.NumericDirection == "output" {
+		return numericChannel{"ANALOG_OUTPUT_TRANSCEIVER", "LEVEL", "FLOAT", true}
+	}
+	switch r.Measurement {
+	case "temperature":
+		return numericChannel{"WEATHER_TRANSMIT", "TEMPERATURE", "FLOAT", false}
+	case "humidity":
+		// The WebUI renders HUMIDITY only correctly as INTEGER.
+		return numericChannel{"WEATHER_TRANSMIT", "HUMIDITY", "INTEGER", false}
+	case "power":
+		return numericChannel{"POWERMETER", "POWER", "FLOAT", false}
+	case "energy":
+		return numericChannel{"POWERMETER", "ENERGY_COUNTER", "FLOAT", false}
+	case "current":
+		return numericChannel{"POWERMETER", "CURRENT", "FLOAT", false}
+	case "voltage":
+		return numericChannel{"POWERMETER", "VOLTAGE", "FLOAT", false}
+	case "frequency":
+		return numericChannel{"POWERMETER", "FREQUENCY", "FLOAT", false}
+	}
+	return numericChannel{"DIGITAL_ANALOG_INPUT", "VALUE", "FLOAT", false}
 }
 
 func floatPtr(v float64) *float64 { return &v }

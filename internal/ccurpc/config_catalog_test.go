@@ -42,8 +42,8 @@ func TestCatalogFromConfigPreservesChannelOrder(t *testing.T) {
 	checks := []struct{ addr, typ, key string }{
 		{"MB007089505003:0", "MAINTENANCE", "UNREACH"},
 		{"MB007089505003:1", "DIGITAL_INPUT", "STATE"},
-		{"MB007089505003:2", "MODBUS_NUMERIC_OUTPUT", "VALUE"},
-		{"MB007089505003:3", "ANALOG_INPUT_TRANSMITTER", "VOLTAGE"},
+		{"MB007089505003:2", "ANALOG_OUTPUT_TRANSCEIVER", "LEVEL"},
+		{"MB007089505003:3", "DIGITAL_ANALOG_INPUT", "VALUE"},
 	}
 	for _, want := range checks {
 		d, e := c.DeviceDescription(want.addr)
@@ -56,7 +56,7 @@ func TestCatalogFromConfigPreservesChannelOrder(t *testing.T) {
 		}
 	}
 	p, _ := c.ParamsetDescription("MB007089505003:2", "VALUES")
-	if p.Members["VALUE"].Members["OPERATIONS"].Text != "7" {
+	if p.Members["LEVEL"].Members["OPERATIONS"].Text != "7" {
 		t.Fatal("numeric output not writable")
 	}
 }

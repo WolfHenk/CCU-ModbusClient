@@ -73,8 +73,8 @@ func TestXMLRPCGetValueUsesCurrentModbusCache(t *testing.T) {
 	for _, c := range []struct{ addr, key, kind, text string }{
 		{serial + ":1", "STATE", "boolean", "1"},
 		{serial + ":2", "STATE", "boolean", "0"},
-		{serial + ":3", "VALUE", "double", "47.5"},
-		{serial + ":4", "VOLTAGE", "double", "15"},
+		{serial + ":3", "LEVEL", "double", "47.5"},
+		{serial + ":4", "VALUE", "double", "15"},
 		{serial + ":5", "VALUE", "string", "18446744073709551615"},
 		{serial + ":0", "UNREACH", "boolean", "0"},
 	} {
@@ -88,7 +88,7 @@ func TestXMLRPCGetValueUsesCurrentModbusCache(t *testing.T) {
 	if err := cat.ApplySnapshot(mapped, []model.DeviceState{state}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := client.Call(context.Background(), "getValue", String(serial+":3"), String("VALUE"))
+	got, err := client.Call(context.Background(), "getValue", String(serial+":3"), String("LEVEL"))
 	if err != nil || got.Kind != "double" || got.Text != "45" {
 		t.Fatalf("updated value %+v %v", got, err)
 	}

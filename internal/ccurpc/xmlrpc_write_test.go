@@ -95,7 +95,7 @@ func TestXMLRPCSetValueCCUPathAndGuards(t *testing.T) {
 		Integer(45),
 		String("47.5"),
 	} {
-		resp, err := call(numeric, "VALUE", v)
+		resp, err := call(numeric, "LEVEL", v)
 		if err != nil || resp.Kind != "string" || resp.Text != "" {
 			t.Fatalf("numeric %+v response %+v err=%v", v, resp, err)
 		}
@@ -119,10 +119,10 @@ func TestXMLRPCSetValueCCUPathAndGuards(t *testing.T) {
 		{"unknown address", serial + ":99", "VALUE", Integer(4)},
 		{"wrong datapoint", numeric, "STATE", Boolean(true)},
 		{"wrong coil type", coil, "STATE", String("true")},
-		{"wrong numeric type", numeric, "VALUE", Boolean(true)},
-		{"invalid numeric", numeric, "VALUE", String("47,5")},
-		{"NaN", numeric, "VALUE", Value{Kind: "double", Text: "NaN"}},
-		{"infinity", numeric, "VALUE", Value{Kind: "double", Text: "+Inf"}},
+		{"wrong numeric type", numeric, "LEVEL", Boolean(true)},
+		{"invalid numeric", numeric, "LEVEL", String("47,5")},
+		{"NaN", numeric, "LEVEL", Value{Kind: "double", Text: "NaN"}},
+		{"infinity", numeric, "LEVEL", Value{Kind: "double", Text: "+Inf"}},
 		{"invalid boolean", coil, "STATE", Value{Kind: "boolean", Text: "wrong"}},
 	}
 	for _, test := range denied {
@@ -138,9 +138,9 @@ func TestXMLRPCSetValueCCUPathAndGuards(t *testing.T) {
 		{serial + ":2", "STATE", Boolean(true), "datapoint is read-only"},
 		{serial + ":99", "STATE", Boolean(true), "unknown datapoint"},
 		{coil, "STATE", String("true"), "STATE requires boolean"},
-		{numeric, "VALUE", Boolean(true), "VALUE requires numeric input"},
-		{numeric, "VALUE", String("47,5"), "invalid numeric VALUE"},
-		{numeric, "VALUE", Value{Kind: "double", Text: "NaN"}, "numeric VALUE must be finite"},
+		{numeric, "LEVEL", Boolean(true), "VALUE requires numeric input"},
+		{numeric, "LEVEL", String("47,5"), "invalid numeric VALUE"},
+		{numeric, "LEVEL", Value{Kind: "double", Text: "NaN"}, "numeric VALUE must be finite"},
 	} {
 		_, err := call(check.address, check.key, check.value)
 		if err == nil || !strings.Contains(err.Error(), check.message) {
@@ -151,7 +151,7 @@ func TestXMLRPCSetValueCCUPathAndGuards(t *testing.T) {
 		t.Fatalf("invalid calls changed write queue: %+v", spy)
 	}
 	spy.reject = true
-	if _, err := call(numeric, "VALUE", Value{Kind: "double", Text: "47.5"}); err == nil {
+	if _, err := call(numeric, "LEVEL", Value{Kind: "double", Text: "47.5"}); err == nil {
 		t.Error("engine queue refusal was not returned as XML-RPC fault")
 	}
 	if _, err := client.Call(ctx, "setValue", String(coil)); err == nil {

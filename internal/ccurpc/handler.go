@@ -97,7 +97,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "RPC encoding failed", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+	w.Header().Set("Content-Type", "text/xml; charset=ISO-8859-1")
 	w.Header().Set("Content-Length", strconv.Itoa(len(wire)))
 	_, _ = bytes.NewReader(wire).WriteTo(w)
 }
@@ -108,7 +108,7 @@ func sendRPCFault(w http.ResponseWriter, code int, msg string) {
 		http.Error(w, "RPC encoding failed", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+	w.Header().Set("Content-Type", "text/xml; charset=ISO-8859-1")
 	w.Header().Set("Content-Length", strconv.Itoa(len(wire)))
 	_, _ = w.Write(wire)
 }

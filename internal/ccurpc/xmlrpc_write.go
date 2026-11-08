@@ -82,7 +82,10 @@ func RegisterXMLRPCWrites(handler *Handler, cfg *config.Config, queue WriteQueue
 			if math.IsNaN(value) || math.IsInf(value, 0) {
 				return Value{}, rpcInputError("numeric VALUE must be finite")
 			}
-			accepted = queue.EnqueueNumeric(route.device, route.register, value)
+			if !queue.EnqueueNumeric(route.device, route.register, value) {
+				return Value{}, rpcInputError(numericRejectReason(queue, route.device, route.register, value))
+			}
+			accepted = true
 		default:
 			return Value{}, rpcInputError("unsupported writable datapoint type")
 		}

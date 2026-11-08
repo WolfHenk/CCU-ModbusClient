@@ -45,10 +45,17 @@ func encodeNumericWrite(r config.Register, desired float64) ([]uint16, error) {
 	}
 	buf := make([]byte, size)
 	integer := func(min, max float64) (float64, error) {
-		if raw < min || raw > max || raw != math.Trunc(raw) {
-			return 0, fmt.Errorf("Sollwert %v ausserhalb des exakten %s-Bereichs", desired, typ)
+		// Factors such as 0.1 are not exact in binary floating point
+		// (0.3/0.1 = 2.9999999999999996). Accept a result that is an integer
+		// within a relative tolerance, then range-check the rounded value.
+		rounded := math.Round(raw)
+		if math.Abs(raw-rounded) > 1e-9*math.Max(1, math.Abs(raw)) {
+			return 0, fmt.Errorf("Sollwert %v ist mit Faktor %v nicht als ganzzahliger %s-Rohwert darstellbar", desired, r.Factor, typ)
 		}
-		return raw, nil
+		if rounded < min || rounded > max {
+			return 0, fmt.Errorf("Sollwert %v ausserhalb des %s-Bereichs", desired, typ)
+		}
+		return rounded, nil
 	}
 	switch typ {
 	case "uint8":

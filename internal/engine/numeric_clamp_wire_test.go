@@ -30,7 +30,7 @@ import (
 	"time"
 )
 
-// Exercises input -> clamp -> queue -> Modbus FC06/FC16 -> independent TCP listener.
+// Exercises range limits: input -> queue -> Modbus FC06/FC16 -> independent TCP listener.
 func TestClampedNumericWriteWire(t *testing.T) {
 	for _, tc := range []struct {
 		typ         string
@@ -38,10 +38,10 @@ func TestClampedNumericWriteWire(t *testing.T) {
 		fc          byte
 		regs        []uint16
 	}{
-		{"int16", -40000, -32768, 6, []uint16{0x8000}},
-		{"uint16", 70000, 65535, 6, []uint16{0xffff}},
-		{"int32", 3000000000, 2147483647, 16, []uint16{0x7fff, 0xffff}},
-		{"uint32", -40, 0, 16, []uint16{0, 0}},
+		{"int16", -32768, -32768, 6, []uint16{0x8000}},
+		{"uint16", 65535, 65535, 6, []uint16{0xffff}},
+		{"int32", 2147483647, 2147483647, 16, []uint16{0x7fff, 0xffff}},
+		{"uint32", 0, 0, 16, []uint16{0, 0}},
 	} {
 		t.Run(tc.typ, func(t *testing.T) {
 			listener, err := net.Listen("tcp", "127.0.0.1:0")

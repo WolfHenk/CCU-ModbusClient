@@ -70,7 +70,7 @@ func ParseCall(r io.Reader) (string, []Value, error) {
 // MarshalResponse produces an XML-RPC result with one parameter.
 func MarshalResponse(value Value) ([]byte, error) {
 	var b bytes.Buffer
-	b.WriteString(`<?xml version="1.0"?><methodResponse><params><param>`)
+	b.WriteString(`<?xml version="1.0" encoding="ISO-8859-1"?><methodResponse><params><param>`)
 	if err := writeValue(&b, value, 0); err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func MarshalResponse(value Value) ([]byte, error) {
 // MarshalFault encodes an XML-RPC fault using the standard faultCode and faultString members.
 func MarshalFault(code int, message string) ([]byte, error) {
 	var b bytes.Buffer
-	b.WriteString(`<?xml version="1.0"?><methodResponse><fault>`)
+	b.WriteString(`<?xml version="1.0" encoding="ISO-8859-1"?><methodResponse><fault>`)
 	if err := writeValue(&b, Struct(map[string]Value{"faultCode": Integer(code), "faultString": String(message)}), 0); err != nil {
 		return nil, err
 	}

@@ -27,6 +27,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"golang.org/x/net/html/charset"
 	"io"
 	"sort"
 	"strings"
@@ -58,7 +59,7 @@ func MarshalCall(method string, params ...Value) ([]byte, error) {
 		return nil, errors.New("invalid XML-RPC method name")
 	}
 	var b bytes.Buffer
-	b.WriteString("<?xml version=\"1.0\"?><methodCall><methodName>")
+	b.WriteString("<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><methodCall><methodName>")
 	if err := xml.EscapeText(&b, []byte(method)); err != nil {
 		return nil, err
 	}
@@ -82,6 +83,7 @@ func ParseMethodName(r io.Reader) (string, error) {
 		Name    string   `xml:"methodName"`
 	}
 	d := xml.NewDecoder(io.LimitReader(r, 1024*1024))
+	d.CharsetReader = charset.NewReaderLabel
 	if err := d.Decode(&c); err != nil {
 		return "", err
 	}
@@ -92,11 +94,12 @@ func ParseMethodName(r io.Reader) (string, error) {
 }
 
 // writeValue limits recursive nesting to avoid unbounded structures.
-// writeXMLEscaped emits only ASCII bytes on the XML-RPC wire. OpenCCU's
-// ReGa consumers may interpret raw UTF-8 text as Latin-1 even if an HTTP
-// charset is advertised. Numeric XML references are encoding-independent,
-// preserve the exact Unicode unit (e.g. °C), and require no proprietary codec.
-// XML escaping of ASCII '<', '&' etc. is still performed by encoding/xml.
+// writeXMLEscaped writes text for an ISO-8859-1 encoded XML-RPC document.
+// OpenCCU's ReGa stores XML character references literally (a unit sent as
+// "&#xB0;C" is kept as that text), so Latin-1 characters such as the degree
+// sign are written as their single ISO-8859-1 byte. Characters outside
+// Latin-1 cannot be represented and are replaced by '?'.
+// XML escaping of ASCII '<', '&' etc. is performed by encoding/xml.
 func writeXMLEscaped(b *bytes.Buffer, s string) error {
 	var ascii strings.Builder
 	flush := func() error {
@@ -115,7 +118,11 @@ func writeXMLEscaped(b *bytes.Buffer, s string) error {
 		if err := flush(); err != nil {
 			return err
 		}
-		fmt.Fprintf(b, "&#x%X;", r)
+		if r <= 0xFF {
+			b.WriteByte(byte(r))
+		} else {
+			b.WriteByte('?')
+		}
 	}
 	return flush()
 }

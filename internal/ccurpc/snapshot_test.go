@@ -35,7 +35,7 @@ func TestSnapshotUpdatesAndRejectsBadQuality(t *testing.T) {
 	if e := c.ApplySnapshot(cfg, []model.DeviceState{st}); e != nil {
 		t.Fatal(e)
 	}
-	for _, check := range []struct{ addr, key, want string }{{"MB001002502001:0", "UNREACH", "1"}, {"MB001002502001:0", "MODBUS_ERROR", "770"}, {"MB001002502001:1", "STATE", "0"}, {"MB001002502001:2", "VOLTAGE", "12.5"}} {
+	for _, check := range []struct{ addr, key, want string }{{"MB001002502001:0", "UNREACH", "1"}, {"MB001002502001:0", "MODBUS_ERROR", "770"}, {"MB001002502001:1", "STATE", "0"}, {"MB001002502001:2", "VALUE", "12.5"}} {
 		ps, e := c.Paramset(check.addr, "VALUES")
 		if e != nil || ps.Members[check.key].Text != check.want {
 			t.Fatalf("%s %s: %v %v", check.addr, check.key, ps, e)
@@ -46,7 +46,7 @@ func TestSnapshotUpdatesAndRejectsBadQuality(t *testing.T) {
 		t.Fatal(e)
 	}
 	ps, _ := c.Paramset("MB001002502001:2", "VALUES")
-	if ps.Members["VOLTAGE"].Text != "12.5" {
+	if ps.Members["VALUE"].Text != "12.5" {
 		t.Fatal("bad quality overwrote last good value")
 	}
 }

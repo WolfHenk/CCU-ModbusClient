@@ -27,8 +27,10 @@ import (
 	"github.com/WolfHenk/CCU-ModbusClient/internal/config"
 )
 
-// The unit must arrive at ReGa as one degree sign, never mojibake "Â°C".
-func TestCCUUnitDegreeUsesEncodingIndependentXMLReference(t *testing.T) {
+// The unit must arrive at ReGa as one ISO-8859-1 degree byte (0xB0).
+// ReGa stores XML character references such as "&#xB0;" literally, and raw
+// UTF-8 (0xC2 0xB0) is shown as mojibake "Â°C".
+func TestCCUUnitDegreeIsLatin1Byte(t *testing.T) {
 	cfg := &config.Config{Devices: []config.Device{{ID: "d", Enabled: true, CCUAddress: "MBC020B01F601", Registers: []config.Register{{
 		ID: "temperature", Name: "Temperatur", Enabled: true, Type: "input", DataType: "int16", Unit: "°C",
 	}}}}}
@@ -44,35 +46,43 @@ func TestCCUUnitDegreeUsesEncodingIndependentXMLReference(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Contains(wire, []byte("Â°C")) || bytes.Contains(wire, []byte("°C")) {
-		t.Fatalf("wire must not carry raw UTF-8/Latin1 degree bytes: %x", wire)
+	if !bytes.HasPrefix(wire, []byte(`<?xml version="1.0" encoding="ISO-8859-1"?>`)) {
+		t.Fatalf("missing ISO-8859-1 declaration: %.60s", wire)
 	}
-	if !bytes.Contains(wire, []byte("&#xB0;C")) {
-		t.Fatalf("degree unit is not safely XML-escaped: %s", wire)
+	if bytes.Contains(wire, []byte("\xc2\xb0")) || bytes.Contains(wire, []byte("&#x")) {
+		t.Fatalf("degree sign must be one Latin-1 byte: %q", wire)
+	}
+	if !bytes.Contains(wire, []byte("\xb0C")) {
+		t.Fatalf("degree unit missing as 0xB0: %q", wire)
 	}
 	got, err := ParseResponse(bytes.NewReader(wire))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if unit := got.Members["VOLTAGE"].Members["UNIT"].Text; unit != "°C" {
+	if unit := got.Members["VALUE"].Members["UNIT"].Text; unit != "°C" {
 		t.Fatalf("decoded unit = %q, expected °C", unit)
 	}
 }
 
-func TestUnicodeUnitInCCUAnnouncementAndXMLMarkup(t *testing.T) {
-	for _, s := range []string{"°C", "µg/m³", "ä & < >"} {
-		wire, err := MarshalCall("newDevices", String(s))
+func TestLatin1TextInCCUAnnouncementAndXMLMarkup(t *testing.T) {
+	for _, c := range []struct {
+		in   string
+		wire []byte
+	}{
+		{"°C", []byte("\xb0C")},
+		{"µg/m³", []byte("\xb5g/m\xb3")},
+		{"ä & < >", []byte("\xe4 &amp; &lt; &gt;")},
+		{"5 €", []byte("5 ?")}, // outside Latin-1
+	} {
+		wire, err := MarshalCall("newDevices", String(c.in))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if bytes.Contains(wire, []byte(s)) {
-			t.Fatalf("wire contains raw UTF-8: %q", s)
+		if !bytes.Contains(wire, c.wire) {
+			t.Fatalf("%q: wire %q does not contain %q", c.in, wire, c.wire)
 		}
-		if !bytes.Contains(wire, []byte("&#x")) {
-			t.Fatalf("no numeric XML entities: %q", s)
-		}
-		if strings.Contains(s, "&") && !bytes.Contains(wire, []byte("&amp;")) {
-			t.Fatal("XML escaping broken")
+		if strings.Contains(string(wire), "&#x") {
+			t.Fatalf("%q: numeric character reference on wire", c.in)
 		}
 	}
 }

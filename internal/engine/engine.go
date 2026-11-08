@@ -117,7 +117,8 @@ func (e *Engine) EnqueueNumeric(deviceID, registerID string, value float64) bool
 			if !reg.Enabled || reg.Type != "holding" || reg.NumericDirection != "output" {
 				return false
 			}
-			value, _ = ClampNumericOutput(reg, value)
+			// Values outside the register range are rejected, never clamped:
+			// writing a limit value the user did not request could move an actuator.
 			if _, err := encodeNumericWrite(reg, value); err != nil {
 				return false
 			}
@@ -131,6 +132,26 @@ func (e *Engine) EnqueueNumeric(deviceID, registerID string, value float64) bool
 		}
 	}
 	return false
+}
+
+// CheckNumeric reports why a numeric write would be rejected, nil if valid.
+func (e *Engine) CheckNumeric(deviceID, registerID string, value float64) error {
+	e.mu.RLock()
+	device, ok := e.active[deviceID]
+	e.mu.RUnlock()
+	if !ok {
+		return fmt.Errorf("Geraet %s nicht aktiv", deviceID)
+	}
+	for _, reg := range device.Registers {
+		if reg.ID == registerID {
+			if !reg.Enabled || reg.Type != "holding" || reg.NumericDirection != "output" {
+				return fmt.Errorf("Register %s ist nicht beschreibbar", registerID)
+			}
+			_, err := encodeNumericWrite(reg, value)
+			return err
+		}
+	}
+	return fmt.Errorf("Register %s unbekannt", registerID)
 }
 
 func (e *Engine) Snapshot() []model.DeviceState {

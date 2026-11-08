@@ -118,18 +118,19 @@ func (c *MemoryCatalog) ApplySnapshot(cfg *config.Config, states []model.DeviceS
 		for _, r := range numerics {
 			rs, ok := byReg[r.ID]
 			if ok && rs.Value.Quality == model.QualityGood {
-				key := "VOLTAGE"
-				if (r.Measurement != "" && r.Measurement != "generic") || (r.Type == "holding" && r.NumericDirection == "output") {
-					key = "VALUE"
-				}
+				nc := numericChannelFor(r)
 				switch v := rs.Value.Value.(type) {
 				case float64:
 					if !math.IsNaN(v) && !math.IsInf(v, 0) {
-						update(index, key, Value{Kind: "double", Text: strconv.FormatFloat(v, 'g', -1, 64)})
+						if nc.DataType == "INTEGER" {
+							update(index, nc.Key, Integer(int(math.Round(v))))
+						} else {
+							update(index, nc.Key, Value{Kind: "double", Text: strconv.FormatFloat(v, 'g', -1, 64)})
+						}
 					}
 				case string:
 					if r.DataType == "uint64" || r.DataType == "int64" {
-						update(index, "VALUE", String(v))
+						update(index, nc.Key, String(v))
 					}
 				}
 			}

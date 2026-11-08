@@ -167,7 +167,7 @@ func (c Client) Call(ctx context.Context, method string, params ...Value) (Value
 	if err != nil {
 		return Value{}, err
 	}
-	req.Header.Set("Content-Type", "text/xml; charset=utf-8")
+	req.Header.Set("Content-Type", "text/xml; charset=ISO-8859-1")
 	httpClient := c.HTTP
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 5 * time.Second}

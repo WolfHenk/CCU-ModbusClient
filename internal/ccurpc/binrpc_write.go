@@ -35,6 +35,23 @@ type WriteQueue interface {
 	EnqueueNumeric(deviceID, registerID string, value float64) bool
 }
 
+// NumericWriteChecker is optionally implemented by the write queue. It names
+// the reason why a numeric value cannot be written (e.g. outside the register
+// range), so the CCU log shows a meaningful fault instead of a generic one.
+type NumericWriteChecker interface {
+	CheckNumeric(deviceID, registerID string, value float64) error
+}
+
+// numericRejectReason returns the most specific rejection text available.
+func numericRejectReason(queue WriteQueue, device, register string, value float64) string {
+	if c, ok := queue.(NumericWriteChecker); ok {
+		if err := c.CheckNumeric(device, register, value); err != nil {
+			return "write rejected: " + err.Error()
+		}
+	}
+	return "write not accepted by Modbus engine"
+}
+
 // writeRoute is the shared, read-only CCU datapoint-to-Modbus register map.
 type writeRoute struct{ device, register, kind string }
 
@@ -78,7 +95,7 @@ func buildWriteRoutes(cfg *config.Config) (map[string]writeRoute, error) {
 		}
 		for _, r := range numeric {
 			if r.Type == "holding" && r.NumericDirection == "output" && r.DataType != "uint64" && r.DataType != "int64" {
-				routes[fmt.Sprintf("%s:%d.VALUE", serial, idx)] = writeRoute{d.ID, r.ID, "numeric"}
+				routes[fmt.Sprintf("%s:%d.%s", serial, idx, numericChannelFor(r).Key)] = writeRoute{d.ID, r.ID, "numeric"}
 			}
 			idx++
 		}
@@ -130,7 +147,10 @@ func RegisterBinRPCWrites(server *ccubinrpc.TCPServer, cfg *config.Config, queue
 			if math.IsNaN(n) || math.IsInf(n, 0) {
 				return ccubinrpc.Parameter{}, errors.New("nonfinite output")
 			}
-			accepted = queue.EnqueueNumeric(route.device, route.register, n)
+			if !queue.EnqueueNumeric(route.device, route.register, n) {
+				return ccubinrpc.Parameter{}, errors.New(numericRejectReason(queue, route.device, route.register, n))
+			}
+			accepted = true
 		}
 		if !accepted {
 			return ccubinrpc.Parameter{}, errors.New("write not accepted by Modbus engine")

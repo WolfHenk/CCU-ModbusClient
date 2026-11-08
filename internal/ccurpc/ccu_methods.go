@@ -117,6 +117,17 @@ func RegisterCCUReadMethods(h *Handler, catalog DeviceCatalog) error {
 			}
 			return String(""), nil
 		}},
+		// ReGa reports how many of its objects use a datapoint, e.g. when it
+		// removes datapoints after a channel type changed. Modbus has no
+		// on-demand polling to adjust, so the call is only acknowledged. The
+		// address is not checked against the catalog because ReGa also sends
+		// it for datapoints that no longer exist.
+		{"reportValueUsage", func(args []Value) (Value, error) {
+			if len(args) != 3 || args[0].Kind != "string" || args[1].Kind != "string" || args[2].Kind != "int" {
+				return Value{}, rpcInputError("reportValueUsage requires address, datapoint name and usage count")
+			}
+			return Boolean(true), nil
+		}},
 	}
 	for _, spec := range specs {
 		if err := h.Register(spec.name, spec.fn); err != nil {

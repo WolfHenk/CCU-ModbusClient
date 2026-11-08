@@ -1,6 +1,6 @@
 # CCU-ModbusClient
 
-**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.1
+**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.2
 
 Eigenständiges Add-on, das Modbus-TCP-Geräte (z. B. SPS, I/O-Module, Zähler) in eine
 HomeMatic-Zentrale einbindet. Die getrennte Software *CCU-Modbus* sowie deren Geräte, Daten
@@ -8,7 +8,7 @@ und Kennungen werden nicht übernommen.
 
 | | |
 |---|---|
-| Version | 0.3.1 |
+| Version | 0.3.2 |
 | Plattformen | Linux AMD64, ARM64, ARMv7 |
 | Lizenz | [CCU-ModbusClient-Lizenz 1.1](LICENSE) – kostenlos, auch gewerblich |
 | Sprache | Go 1.25.14, statisch gebaut |
@@ -84,6 +84,41 @@ Rechte Dritter: [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) und [third_party/lice
 
 ---
 
+## Änderungen in 0.3.2
+
+- **Kanaltypen mit Beschriftung**: Zahlenwerte erscheinen in der CCU unter
+  vorhandenen Kanaltypen, deren Datenpunkte in der WebUI beschriftet sind –
+  ohne Änderung an OpenCCU-Dateien. Istwerte je Messgröße: allgemein
+  „Eingangswert“, Temperatur, Rel. Luftfeuchte, Leistung, Energie-Zähler, Strom,
+  Spannung, Frequenz. Sollwerte (Holding-Register mit Richtung Ausgang):
+  „Ausgangspegel“ mit der eingestellten Einheit.
+  Datenpunkte heißen jetzt z. B. `…:5.VALUE`, `.TEMPERATURE` oder `.LEVEL`
+  statt `.VOLTAGE`/`.VALUE`. **Bestehende Geräte** übernimmt die CCU beim Update
+  selbst mit den neuen Kanaltypen; Geräte- und Kanalnamen können dabei auf die
+  Standardnamen zurückfallen. Programme und Skripte mit den alten
+  Datenpunktnamen sind anzupassen.
+- **Einheiten**: Sonderzeichen wie „°“ werden im ISO-8859-1-Zeichensatz der CCU
+  übertragen und auch in Skripten korrekt geliefert (vorher „Â°C“ bzw. „&#xB0;C“).
+- **Bereichsprüfung**: Sollwerte außerhalb des Datentyps werden abgelehnt statt
+  auf den Grenzwert begrenzt; der Grund steht in der Fehlermeldung.
+  Werte mit Faktor 0,1 (z. B. 45,3 °C) werden nicht mehr fälschlich abgewiesen.
+- **Restlose Deinstallation**: Beim Entfernen über *Einstellungen →
+  Systemsteuerung → Zusatzsoftware* löscht die CCU alle CCU-ModbusClient-Geräte
+  samt Kanälen, Datenpunkten sowie Raum- und Gewerkzuordnungen und anschließend
+  die Schnittstelle. Auch die Konfiguration (`config.json`) wird entfernt –
+  vorher bei Bedarf sichern. Programme, die Datenpunkte der Geräte verwenden,
+  bleiben bestehen und sind anzupassen. Gelingt das Löschen in der CCU nicht,
+  bricht die Deinstallation ab, ohne etwas zu entfernen, und kann wiederholt
+  werden.
+
+**Vor jeder Deinstallation:** Die Geräte- und Kanalnamen, Datenpunktadressen
+und die Datei `config.json` bei Bedarf sichern. Alle CCU-Programme, Direkt-
+verknüpfungen und Skripte auf Verweise auf `CCU-ModbusClient`-Geräte bzw.
+`MBC...`-Adressen prüfen und solche Verweise vorher entfernen oder ersetzen.
+**Die Deinstallation löscht keine fremden Programme und repariert keine
+verbleibenden Skriptreferenzen.** Ein vollständiger Rückbau des Add-ons ist
+nicht gleichbedeutend mit einer automatischen Reparatur benutzereigener Logik.
+
 ## Änderungen in 0.3.1
 
 - **XML-RPC `setValue`**: Schreibzugriffe der CCU auf schaltbare Coils und
@@ -141,7 +176,7 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 - `make build` erzeugt Daemon und Konfigurationswerkzeug für AMD64, ARM64 und ARMv7
   (`CGO_ENABLED=0`, `-trimpath`).
 - `make package` prüft die Quellen und erstellt beide Archive.
-- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.1`.
+- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.2`.
 
 ---
 
@@ -149,8 +184,8 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 
 | Archiv | Inhalt |
 |---|---|
-| `CCU-ModbusClient-0.3.1-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
-| `CCU-ModbusClient-0.3.1-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
+| `CCU-ModbusClient-0.3.2-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
+| `CCU-ModbusClient-0.3.2-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
 
 Fertige Archive liegen unter `releases/`, selbst gebaute unter `build/`.
 

@@ -107,7 +107,7 @@ func runWithEvents(ctx context.Context, path, ccuURL, eventURL string, check boo
 	return runtime.ServeRegistered(ctx)
 }
 
-var version = "0.3.1"
+var version = "0.3.2"
 
 func main() {
 	showVersion := flag.Bool("version", false, "print program version and exit")
@@ -118,9 +118,24 @@ func main() {
 	xmlListen := flag.String("xmlrpc-listen", "", "serve independent OpenCCU XML-RPC on this address")
 	first := flag.Int("port-first", 31999, "first callback port")
 	last := flag.Int("port-last", 32030, "last callback port")
+	purge := flag.Bool("purge-ccu", false, "remove all CCU-ModbusClient devices and the interface object from ReGa and exit (used by uninstall)")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println(version)
+		return
+	}
+	if *purge {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		res, err := ccurpc.PurgeFromReGa(ctx, ccurpc.ReGaEndpoints{
+			ScriptURL:   "http://127.0.0.1:8181/rega.exe",
+			CallbackURL: "http://127.0.0.1:1999/",
+		})
+		if err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		fmt.Printf("ReGa interface %q: %d devices deleted, interface object deleted=%v\n", res.InterfaceID, len(res.DeletedDevices), res.InterfaceDeleted)
 		return
 	}
 	if *configPath == "" {

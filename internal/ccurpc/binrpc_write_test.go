@@ -67,7 +67,7 @@ func TestBinRPCSetValueOutputGuards(t *testing.T) {
 	if _, e := client.Call(ctx, "setValue", str("MBC03CF01F601:1"), str("STATE"), ccubinrpc.Parameter{Type: ccubinrpc.TypeBoolean, Flag: true}); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := client.Call(ctx, "setValue", str("MBC03CF01F601:3"), str("VALUE"), ccubinrpc.Parameter{Type: ccubinrpc.TypeDouble, Float: 12.5}); e != nil {
+	if _, e := client.Call(ctx, "setValue", str("MBC03CF01F601:3"), str("LEVEL"), ccubinrpc.Parameter{Type: ccubinrpc.TypeDouble, Float: 12.5}); e != nil {
 		t.Fatal(e)
 	}
 	if _, e := client.Call(ctx, "setValue", str("MBC03CF01F601:2"), str("STATE"), ccubinrpc.Parameter{Type: ccubinrpc.TypeBoolean, Flag: true}); e == nil {

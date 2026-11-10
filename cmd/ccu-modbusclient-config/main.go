@@ -30,7 +30,7 @@ import (
 	"path/filepath"
 )
 
-var version = "0.3.5"
+var version = "0.3.6"
 
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "-version" {

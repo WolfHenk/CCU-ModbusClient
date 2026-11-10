@@ -107,7 +107,7 @@ func runWithEvents(ctx context.Context, path, ccuURL, eventURL string, check boo
 	return runtime.ServeRegistered(ctx)
 }
 
-var version = "0.3.5"
+var version = "0.3.6"
 
 func main() {
 	showVersion := flag.Bool("version", false, "print program version and exit")

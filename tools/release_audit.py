@@ -104,7 +104,7 @@ def test_packages(names):
                 "licenses/golang.org-x-text-LICENSE", "examples/config.json",
                 "www/index.cgi", "www/app.js", "www/style.css",
                 "www/img/modbus-logo.png", "www/img/modbus-logo-50.png",
-                "www/img/modbus-logo-250.png", "bin/register_devtype", "bin/self_update", "www/update-check.cgi")
+                "www/img/modbus-logo-250.png", "bin/register_devtype", "bin/self_update", "www/update-check.cgi", "www/version-check.cgi")
     for name in required:
         assert name in install, f"missing installer file: {name}"
     for arch in ("linux-amd64", "linux-arm64", "linux-arm"):

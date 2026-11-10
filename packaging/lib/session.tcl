@@ -2,8 +2,8 @@
 # Projekt:      CCU-ModbusClient
 # Datei:        packaging/lib/session.tcl
 # Ersteller:    Wolfram Henkel
-# Datum:        05. Nov. 2026
-# Version:      0.3.0
+# Datum:        10. Nov. 2026
+# Version:      0.3.5
 #
 # Copyright (c) 2026 Wolfram Henkel.
 #
@@ -46,10 +46,15 @@ proc url_decode {s} {
     return $out
 }
 
+# Only administrator sessions are accepted, like OpenCCU's own add-on page
+# (cp_software.cgi: session_requestisvalid 8). The ReGa session string is
+# "uid;upl;username;firstname;lastname;" (see /www/config/session.tcl).
 proc check_session {sid} {
     if {[regexp {^@([0-9a-zA-Z]{10})@$} $sid all sidnr]} {
         set res [lindex [rega_script "Write(system.GetSessionVarStr('$sidnr'));"] 1]
-        if {$res != ""} { return 1 }
+        if {[regexp {^([0-9]+);([0-9]+);} $res all uid upl] && $uid > 0 && $upl >= 8} {
+            return 1
+        }
     }
     return 0
 }

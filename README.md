@@ -141,7 +141,7 @@ nicht gleichbedeutend mit einer automatischen Reparatur benutzereigener Logik.
 ## Projektstand
 
 > **⚠️ Hinweis:** Bau und lokale Tests ersetzen keinen Installationstest auf einer echten
-> OpenCCU. Nicht ungeprüft auf produktiven CCU-Systemen installieren.
+> OpenCCU. Verändern von Registern auf einer funktionierenden Anlage kann die Anlageneinstellungen ändern und zu Schäden führen
 
 Quellcode, Tests, Dokumentation und Binaries für alle Plattformen liegen in diesem Repository
 bzw. in den Release-Archiven.
@@ -194,15 +194,6 @@ Fertige Archive liegen unter `releases/`, selbst gebaute unter `build/`.
 ## Installation
 
 Installation als Zusatzsoftware über die WebUI der OpenCCU; die passende Architektur wählen.
-
-Vollständig abgenommen ist eine Installation erst nach Prüfung von:
-
-- WebUI-Sitzung und Konfiguration
-- ReGa-Integration
-- Schreibpfaden zu den Modbus-Geräten
-- Installation und Deinstallation
-
-Ein erfolgreicher Build allein ist kein Nachweis dieser Abnahme.
 
 ---
 

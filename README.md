@@ -3,7 +3,7 @@
 **Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.3
 
 Eigenständiges Add-on, das Modbus-TCP-Geräte (z. B. SPS, I/O-Module, Zähler) in eine
-HomeMatic-Zentrale einbindet. Die bisherige Software *CCU-Modbus* sowie deren Geräte, Daten
+HomeMatic-Zentrale einbindet. Die eingestellte Software *CCU-Modbus* sowie deren Geräte, Daten
 und Kennungen werden nicht übernommen.
 
 | | |
@@ -169,7 +169,7 @@ nicht gleichbedeutend mit einer automatischen Reparatur benutzereigener Logik.
 ## Projektstand
 
 > **⚠️ Hinweis:** Bau und lokale Tests ersetzen keinen Installationstest auf einer echten
-> OpenCCU. Bei produktiven Anlagen können schreibende Modbus-Zugriffe Betriebseinstellungen ändern und Schäden auslösen.
+> OpenCCU. Verändern von Registern auf einer funktionierenden Anlage kann die Anlageneinstellungen ändern und zu Schäden führen
 
 Quellcode, Tests, Dokumentation und Binaries für alle Plattformen liegen in diesem Repository
 bzw. in den Release-Archiven.

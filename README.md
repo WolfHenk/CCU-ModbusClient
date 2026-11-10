@@ -1,14 +1,14 @@
 # CCU-ModbusClient
 
-**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.2
+**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.3
 
 Eigenständiges Add-on, das Modbus-TCP-Geräte (z. B. SPS, I/O-Module, Zähler) in eine
-HomeMatic-Zentrale einbindet. Die eingesstellte Software *CCU-Modbus* sowie deren Geräte, Daten
+HomeMatic-Zentrale einbindet. Die bisherige Software *CCU-Modbus* sowie deren Geräte, Daten
 und Kennungen werden nicht übernommen.
 
 | | |
 |---|---|
-| Version | 0.3.2 |
+| Version | 0.3.3 |
 | Plattformen | Linux AMD64, ARM64, ARMv7 |
 | Lizenz | [CCU-ModbusClient-Lizenz 1.1](LICENSE) – kostenlos, auch gewerblich |
 | Sprache | Go 1.25.14, statisch gebaut |
@@ -37,6 +37,22 @@ Dabei wurde Wert darauf gelegt, dass in der CCU alles wie ein ganz normales Ger�
 Schaltaktoren, Kontakte und Messwerte erscheinen mit Kanälen und Datenpunkten wie bei
 HomeMatic-Geräten und lassen sich in Programmen und Skripten wie gewohnt verwenden. Die Übersetzung in die Modbus-Sichtweise geschieht vollständig im
 CCU-ModbusClient-System.
+
+---
+
+## ⚠️ Wichtiger Sicherheitshinweis zu Schreibzugriffen
+
+**Das Verändern von Modbus-Registern kann schädliche oder gefährliche Betriebszustände auslösen.**
+Dies betrifft insbesondere Wechselrichter, Heizungsanlagen und Maschinensteuerungen:
+Falsch gesetzte Werte können Geräte beschädigen, Schutzfunktionen beeinträchtigen
+oder Personen gefährden.
+
+Vor jedem Schreibzugriff sind die Herstellerunterlagen, die zulässigen Registeradressen,
+Datentypen, Wertebereiche und die Auswirkungen auf die Anlage zu prüfen.
+**Der Anwender trägt die Verantwortung für die von ihm vorgenommenen Einstellungen
+und die daraus entstehenden Folgen.** Der Autor übernimmt für Schäden durch
+unsachgemäße Verwendung oder Konfiguration keine Haftung, soweit gesetzlich zulässig.
+CCU-ModbusClient ersetzt keine erforderlichen Sicherheitsfunktionen der angeschlossenen Geräte.
 
 ---
 
@@ -83,6 +99,18 @@ Maßgeblich ist der vollständige Text in [LICENSE](LICENSE).
 Rechte Dritter: [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) und [third_party/licenses](third_party/licenses).
 
 ---
+
+## Änderungen in 0.3.3
+
+- **OpenCCU-Komponentenüberwachung repariert:** Die XML-RPC-Schnittstelle
+  beantwortet jetzt `system.listMethods` mit der tatsächlichen, sortierten
+  Liste ihrer Methoden. Die WebUI erkennt damit den laufenden CCU-ModbusClient
+  zuverlässig über `Interface.isPresent`, statt fälschlich eine ausgefallene
+  Komponente zu melden.
+- **Servicemeldungsabfrage:** `getServiceMessages` liefert eine leere Liste,
+  da der Client derzeit keine Homematic-Servicemeldungen generiert.
+- Keine Änderungen an Modbus-Geräteadressen, Schreibschutz, Konfiguration,
+  vorhandenen CCU-Programmen oder Fremdgeräten.
 
 ## Änderungen in 0.3.2
 
@@ -141,7 +169,7 @@ nicht gleichbedeutend mit einer automatischen Reparatur benutzereigener Logik.
 ## Projektstand
 
 > **⚠️ Hinweis:** Bau und lokale Tests ersetzen keinen Installationstest auf einer echten
-> OpenCCU. Verändern von Registern auf einer funktionierenden Anlage kann die Anlageneinstellungen ändern und zu Schäden führen
+> OpenCCU. Bei produktiven Anlagen können schreibende Modbus-Zugriffe Betriebseinstellungen ändern und Schäden auslösen.
 
 Quellcode, Tests, Dokumentation und Binaries für alle Plattformen liegen in diesem Repository
 bzw. in den Release-Archiven.
@@ -176,7 +204,7 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 - `make build` erzeugt Daemon und Konfigurationswerkzeug für AMD64, ARM64 und ARMv7
   (`CGO_ENABLED=0`, `-trimpath`).
 - `make package` prüft die Quellen und erstellt beide Archive.
-- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.2`.
+- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.3`.
 
 ---
 
@@ -184,8 +212,8 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 
 | Archiv | Inhalt |
 |---|---|
-| `CCU-ModbusClient-0.3.2-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
-| `CCU-ModbusClient-0.3.2-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
+| `CCU-ModbusClient-0.3.3-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
+| `CCU-ModbusClient-0.3.3-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
 
 Fertige Archive liegen unter `releases/`, selbst gebaute unter `build/`.
 

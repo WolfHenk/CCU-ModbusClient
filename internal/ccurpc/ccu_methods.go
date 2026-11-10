@@ -3,7 +3,7 @@
 // Datei:        internal/ccurpc/ccu_methods.go
 // Ersteller:    Wolfram Henkel
 // Datum:        05. Nov. 2026
-// Version:      0.3.0
+// Version:      0.3.3
 //
 // Copyright (c) 2026 Wolfram Henkel.
 //
@@ -21,6 +21,7 @@ package ccurpc
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 )
 
@@ -43,6 +44,25 @@ func RegisterCCUReadMethods(h *Handler, catalog DeviceCatalog) error {
 		name string
 		fn   Method
 	}{
+		// OpenCCU's Interface.isPresent calls system.listMethods every 30 seconds.
+		// Advertise the methods actually registered on this XML-RPC endpoint.
+		{"system.listMethods", func(args []Value) (Value, error) {
+			if len(args) != 0 {
+				return Value{}, rpcInputError("system.listMethods expects no arguments")
+			}
+			h.mu.RLock()
+			names := make([]string, 0, len(h.methods))
+			for name := range h.methods {
+				names = append(names, name)
+			}
+			h.mu.RUnlock()
+			sort.Strings(names)
+			methods := make([]Value, 0, len(names))
+			for _, name := range names {
+				methods = append(methods, String(name))
+			}
+			return Array(methods...), nil
+		}},
 		{"listDevices", func(args []Value) (Value, error) {
 			if len(args) != 0 {
 				return Value{}, fmt.Errorf("listDevices expects no arguments")
@@ -101,6 +121,14 @@ func RegisterCCUReadMethods(h *Handler, catalog DeviceCatalog) error {
 				return Value{}, rpcInputError("unknown datapoint")
 			}
 			return value, nil
+		}},
+		// CCU expects an array of interface service messages. The virtual
+		// Modbus devices do not currently generate Homematic service messages.
+		{"getServiceMessages", func(args []Value) (Value, error) {
+			if len(args) != 0 {
+				return Value{}, rpcInputError("getServiceMessages expects no arguments")
+			}
+			return Array(), nil
 		}},
 		{"getLinks", func(args []Value) (Value, error) {
 			if len(args) != 2 || args[0].Kind != "string" || args[1].Kind != "int" {

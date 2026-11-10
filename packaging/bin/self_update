@@ -1,0 +1,177 @@
+#!/bin/sh
+# -----------------------------------------------------------------------------
+# Projekt:      CCU-ModbusClient
+# Datei:        packaging/bin/self_update
+# Ersteller:    Wolfram Henkel
+# Datum:        10. Nov. 2026
+# Version:      0.3.4
+#
+# Copyright (c) 2026 Wolfram Henkel.
+#
+# Lizenz:       CCU-ModbusClient-Lizenz für kostenfreie Nutzung und
+#               Weitergabe, Version 1.1.
+#
+# Private und gewerbliche Nutzung sind erlaubt.
+# Die Software und Änderungen dürfen nur kostenlos unter
+# derselben Lizenz und mit vollständigem Quellcode weitergegeben werden.
+#
+# Vollständiger Lizenztext: LICENSE
+# -----------------------------------------------------------------------------
+# The unprivileged web request is authenticated by update-check.cgi.
+# Only this hardcoded official HTTPS source is allowed; no user URL or version
+# can be passed to the installer. Versions are read-only until explicit POST.
+set -eu
+umask 077
+BASE=/usr/local/addons/ccu-modbusclient
+CONF=/usr/local/etc/config/addons/ccu-modbusclient/config.json
+ROOT=https://raw.githubusercontent.com/WolfHenk/CCU-ModbusClient
+STATUS=/usr/local/tmp/ccu-modbusclient-update.status
+LOCK=/usr/local/tmp/ccu-modbusclient-update.lock
+LOG=/usr/local/tmp/ccu-modbusclient-update.log
+
+valid_version() {
+    printf '%s\n' "$1" | grep -Eq '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+}
+score_version() {
+    printf '%s\n' "$1" | awk -F. '{printf "%.0f\n", $1 * 1000000 + $2 * 1000 + $3}'
+}
+local_version() {
+    [ -r "$BASE/VERSION" ] || return 1
+    v=$(tr -d '\r\n' < "$BASE/VERSION")
+    valid_version "$v" || return 1
+    printf '%s\n' "$v"
+}
+fetch_url() {
+    curl --silent --show-error --fail --location \
+        --proto '=https' --proto-redir '=https' \
+        --connect-timeout 7 --max-time 100 "$1"
+}
+remote_version() {
+    v=$(curl --silent --show-error --fail --location \
+        --proto '=https' --proto-redir '=https' \
+        --connect-timeout 5 --max-time 15 "$ROOT/main/VERSION") || return 1
+    valid_version "$v" || return 1
+    printf '%s\n' "$v"
+}
+status_write() {
+    # Controlled enum and validated version: safe to include in JSON.
+    s=$1
+    v=$2
+    temp="$STATUS.$$"
+    printf '{"ok":true,"state":"%s","target":"%s"}\n' "$s" "$v" > "$temp"
+    chmod 600 "$temp"
+    mv -f "$temp" "$STATUS"
+}
+check() {
+    current=$(local_version) || return 1
+    latest=$(remote_version) || return 1
+    if [ "$(score_version "$latest")" -gt "$(score_version "$current")" ]; then
+        available=true
+    else
+        available=false
+    fi
+    printf '{"ok":true,"current":"%s","latest":"%s","available":%s}\n' "$current" "$latest" "$available"
+}
+status() {
+    if [ -r "$STATUS" ]; then
+        cat "$STATUS"
+    else
+        printf '{"ok":true,"state":"idle","target":""}\n'
+    fi
+}
+start() {
+    if ! mkdir -m 700 "$LOCK" 2>/dev/null; then
+        echo '{"ok":false,"error":"Aktualisierung laeuft bereits"}'
+        return 1
+    fi
+    status_write starting ""
+    # The installer replaces its own add-on files. Run the worker from a
+    # private, independent copy so the running shell script cannot be truncated.
+    cp "$0" "$LOCK/worker"
+    chmod 700 "$LOCK/worker"
+    nohup "$LOCK/worker" worker < /dev/null > "$LOG" 2>&1 &
+    printf '{"ok":true,"started":true}\n'
+}
+worker() {
+    dir=""
+    target=""
+    stage=checking
+    finish() {
+        rc=$?
+        trap - EXIT HUP INT TERM
+        if [ "$rc" -ne 0 ]; then
+            status_write failed "$target" || :
+        fi
+        if [ -n "$dir" ] && [ -d "$dir" ]; then rm -rf "$dir"; fi
+        rm -rf "$LOCK"
+    }
+    trap finish EXIT
+    trap 'exit 1' HUP INT TERM
+    status_write checking ""
+    current=$(local_version)
+    target=$(remote_version)
+    if [ "$(score_version "$target")" -le "$(score_version "$current")" ]; then
+        echo "No newer version is available"
+        exit 1
+    fi
+    dir=$(mktemp -d /usr/local/tmp/ccu-modbusclient-release.XXXXXX)
+    name="CCU-ModbusClient-$target-INSTALL.tar.gz"
+    url="$ROOT/v$target/releases/$name"
+    status_write downloading "$target"
+    fetch_url "$url" > "$dir/$name"
+    fetch_url "$url.sha256" > "$dir/$name.sha256"
+    stage=verifying
+    status_write verifying "$target"
+    # Manifest is downloaded over HTTPS from the version-tagged repository.
+    [ "$(wc -l < "$dir/$name.sha256")" -eq 1 ]
+    expected=$(awk '{print $1}' "$dir/$name.sha256")
+    printf '%s\n' "$expected" | grep -Eq '^[a-f0-9]{64}$'
+    manifest_name=$(awk '{print $2}' "$dir/$name.sha256")
+    [ "$manifest_name" = "$name" ]
+    actual=$(sha256sum "$dir/$name" | awk '{print $1}')
+    [ "$expected" = "$actual" ] || { echo "Checksum mismatch"; exit 1; }
+    tar -tzf "$dir/$name" > "$dir/entries"
+    # Reject absolute paths and traversal before extraction.
+    awk '{
+      p=$0; sub(/^\.\//,"",p);
+      if(p ~ /^\// || p ~ /(^|\/)\.\.(\/|$)/) exit 1
+    }' "$dir/entries"
+    mkdir "$dir/unpack"
+    tar -xzf "$dir/$name" -C "$dir/unpack"
+    [ "$(tr -d '\r\n' < "$dir/unpack/VERSION")" = "$target" ]
+    [ -x "$dir/unpack/update_script" ]
+    [ -f "$dir/unpack/source/LICENSE" ]
+    [ -f "$CONF" ]
+
+    status_write backing_up "$target"
+    backupdir=/usr/local/etc/config/addons/ccu-modbusclient/backups
+    mkdir -p "$backupdir"
+    chmod 700 "$backupdir"
+    backup="$backupdir/pre-update-$current-to-$target-$(date +%Y%m%d-%H%M%S).tar.gz"
+    tar -czf "$backup" -C / \
+      usr/local/addons/ccu-modbusclient \
+      usr/local/etc/config/addons/ccu-modbusclient/config.json \
+      usr/local/etc/config/InterfacesList.xml \
+      usr/local/etc/config/rc.d/ccu-modbusclient
+    chmod 600 "$backup"
+    before=$(sha256sum "$CONF" | awk '{print $1}')
+
+    status_write installing "$target"
+    (cd "$dir/unpack" && ./update_script)
+    status_write testing "$target"
+    [ "$(local_version)" = "$target" ]
+    [ "$(sha256sum "$CONF" | awk '{print $1}')" = "$before" ]
+    pidof ccu-modbusclientd >/dev/null
+    printf '<methodCall><methodName>system.listMethods</methodName><params></params></methodCall>' \
+       | curl -fsS -m 10 -H 'Content-Type: text/xml' --data-binary @- \
+       http://127.0.0.1:18702/RPC3 | grep -q '<string>system.listMethods</string>'
+    status_write done "$target"
+    echo "Updated from $current to $target; backup: $backup"
+}
+case "${1:-}" in
+    check) check ;;
+    status) status ;;
+    start) start ;;
+    worker) worker ;;
+    *) echo "usage: self_update check|status|start" >&2; exit 2 ;;
+esac

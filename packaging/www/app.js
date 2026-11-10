@@ -42,6 +42,69 @@ function api(action,method,body){
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function setDirty(v){dirty=v;$('dirtyText').textContent=v?'Ungespeicherte Änderungen.':'Keine ungespeicherten Änderungen.';}
 function notice(msg,err){var n=$('notice');n.textContent=msg;n.className='notice'+(err?' error':'');setTimeout(function(){n.className='notice hidden';},6000);}
+// A newer public release is shown beside the currently installed version.
+// The server rechecks the release and checksum before any installation.
+function updateApi(action,method){
+  return fetch('update-check.cgi?sid='+encodeURIComponent(sid)+'&action='+action,{
+    method:method||'GET',cache:'no-store',headers:{'X-Requested-With':'XMLHttpRequest'}
+  }).then(function(r){return r.text().then(function(t){
+    var j;try{j=JSON.parse(t);}catch(e){throw new Error('Antwort der Aktualisierungsprüfung ungültig');}
+    if(!r.ok||j.ok===false)throw new Error(j.error||('HTTP '+r.status));
+    return j;
+  });});
+}
+var updatePoll=null;
+function updateStatusMessage(state,target){
+  var labels={starting:'Aktualisierung wird vorbereitet…',
+    checking:'Neue Version wird geprüft…',downloading:'Aktualisierung wird heruntergeladen…',
+    verifying:'Paket und Prüfsumme werden geprüft…',backing_up:'Konfiguration wird gesichert…',
+    installing:'Aktualisierung wird installiert…',testing:'Funktion wird überprüft…'};
+  return labels[state]||(target?'Aktualisierung auf '+target:'Aktualisierung läuft…');
+}
+function refreshUpdate(){
+  var info=$('updateInfo'),btn=$('installUpdate');
+  info.textContent='Prüfe auf Aktualisierungen…';btn.classList.add('hidden');btn.disabled=true;
+  return updateApi('check').then(function(v){
+    if(!/^\d+\.\d+\.\d+$/.test(v.latest)||!/^\d+\.\d+\.\d+$/.test(v.current))
+      throw new Error('Versionsangabe ungültig');
+    if(v.available){
+      info.textContent='Version '+v.latest+' verfügbar';
+      btn.classList.remove('hidden');btn.disabled=false;
+      btn.dataset.version=v.latest;
+    }else{
+      info.textContent='Aktuelle Version';
+    }
+  }).catch(function(){info.textContent='Aktualisierungsprüfung momentan nicht verfügbar';});
+}
+function pollUpdate(){
+  updateApi('status').then(function(s){
+    var state=s.state||'starting',info=$('updateInfo');
+    if(state==='done'){
+      clearInterval(updatePoll);updatePoll=null;
+      info.textContent='Version '+s.target+' erfolgreich installiert. Lade Oberfläche neu…';
+      setTimeout(function(){location.reload();},1500);
+    }else if(state==='failed'){
+      clearInterval(updatePoll);updatePoll=null;
+      info.textContent='Aktualisierung fehlgeschlagen – bestehende Konfiguration prüfen.';
+      $('installUpdate').disabled=false;
+      notice('Aktualisierung fehlgeschlagen. Bitte das Update-Protokoll prüfen.',true);
+    }else{info.textContent=updateStatusMessage(state,s.target);}
+  }).catch(function(){ $('updateInfo').textContent='Status der Aktualisierung nicht erreichbar'; });
+}
+$('installUpdate').onclick=function(){
+  if(dirty){notice('Bitte ungespeicherte Änderungen zuerst speichern.',true);return;}
+  var target=this.dataset.version||'neue Version';
+  if(!confirm('CCU-ModbusClient auf Version '+target+' aktualisieren? Der Dienst wird dabei kurz neu gestartet.'))return;
+  this.disabled=true;$('updateInfo').textContent='Aktualisierung wird gestartet…';
+  updateApi('install','POST').then(function(){
+    pollUpdate();
+    updatePoll=setInterval(pollUpdate,2000);
+  }).catch(function(e){
+    $('installUpdate').disabled=false;
+    $('updateInfo').textContent='Aktualisierung konnte nicht gestartet werden.';
+    notice(e.message,true);
+  });
+};
 function stateText(d){return d.enabled?'Aktiviert':'Deaktiviert';}
 
 function render(){
@@ -218,4 +281,5 @@ function init(){
 }
 window.addEventListener('beforeunload',function(e){if(dirty){e.preventDefault();e.returnValue='';}});
 init();
+refreshUpdate();
 })();

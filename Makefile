@@ -27,9 +27,10 @@ SOURCE_FILES := go.mod go.sum Makefile VERSION README.md LICENSE THIRD_PARTY_NOT
 test:
 	$(GO) test -count=1 ./...
 	$(GO) vet ./...
-	sh -n packaging/update_script packaging/rc.d/ccu-modbusclient packaging/www/update-check.cgi packaging/bin/register_interface packaging/bin/register_devtype
+	sh -n packaging/update_script packaging/rc.d/ccu-modbusclient packaging/www/update-check.cgi packaging/bin/register_interface packaging/bin/register_devtype packaging/bin/self_update
 	node --check packaging/www/app.js
 	node tools/ui_test.js
+	python3 tools/test_self_update.py
 	python3 tools/test_addon_info.py
 	python3 tools/release_audit.py --sources
 
@@ -53,7 +54,7 @@ package: test build source
 	rm -rf build/pkg
 	mkdir -p build/pkg/bin build/pkg/rc.d build/pkg/www/img build/pkg/licenses build/pkg/examples build/pkg/lib
 	cp -a build/bin/linux-* build/pkg/bin/
-	cp packaging/bin/update_addon packaging/bin/register_interface packaging/bin/register_devtype build/pkg/bin/
+	cp packaging/bin/update_addon packaging/bin/register_interface packaging/bin/register_devtype packaging/bin/self_update build/pkg/bin/
 	cp packaging/update_script build/pkg/
 	cp packaging/rc.d/ccu-modbusclient build/pkg/rc.d/
 	cp packaging/www/*.cgi packaging/www/app.js packaging/www/style.css build/pkg/www/
@@ -63,8 +64,9 @@ package: test build source
 	cp VERSION LICENSE THIRD_PARTY_NOTICES README.md build/pkg/
 	cp third_party/licenses/* build/pkg/licenses/
 	cp -a build/source build/pkg/source
-	chmod 755 build/pkg/update_script build/pkg/bin/update_addon build/pkg/bin/register_interface build/pkg/bin/register_devtype build/pkg/www/*.cgi build/pkg/rc.d/ccu-modbusclient
+	chmod 755 build/pkg/update_script build/pkg/bin/update_addon build/pkg/bin/register_interface build/pkg/bin/register_devtype build/pkg/bin/self_update build/pkg/www/*.cgi build/pkg/rc.d/ccu-modbusclient
 	cd build/pkg && tar -czf ../CCU-ModbusClient-$(VERSION)-INSTALL.tar.gz .
+	cd build && sha256sum CCU-ModbusClient-$(VERSION)-INSTALL.tar.gz > CCU-ModbusClient-$(VERSION)-INSTALL.tar.gz.sha256
 	python3 tools/release_audit.py --package
 
 verify-release:

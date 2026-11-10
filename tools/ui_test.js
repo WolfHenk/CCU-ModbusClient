@@ -43,7 +43,7 @@ class Elem{
  constructor(doc,id=''){
   this.doc=doc;this.id=id;this.value='';this.checked=false;this.disabled=false;
   this.textContent='';this._html='';this.children=[];this.queries=new Map();
-  this.attributes={};this.className='';this.style={};this.hidden=false;this.modal=false;
+  this.attributes={};this.dataset={};this.className='';this.style={};this.hidden=false;this.modal=false;
   this.classList={
    contains:(c)=>this.className.split(/\s+/).includes(c),
    add:(c)=>{if(!this.classList.contains(c))this.className+=(this.className?' ':'')+c},
@@ -83,9 +83,18 @@ function setup(input, opts={}){
  const elements={};
  const doc={elements,getElementById(id){return elements[id]||null},createElement(){return new Elem(doc)}};
  for(const id of ids)elements[id]=new Elem(doc,id);
- let server=clone(input),writes=[],reads=[],requests=[];
+ let server=clone(input),writes=[],reads=[],requests=[],updateRequests=[];
  const mockfetch=async(url,init={})=>{
   const act=new URL('http://ccu.invalid/'+url).searchParams.get('action');
+  if(url.startsWith('update-check.cgi')){
+    updateRequests.push({act,method:init.method||'GET'});
+    let result;
+    if(act==='check')result={ok:true,current:'0.3.4',latest:opts.latest||'0.3.4',available:!!opts.latest};
+    else if(act==='install')result={ok:true,started:true};
+    else if(act==='status')result={ok:true,state:opts.updateState||'downloading',target:opts.latest||'0.3.5'};
+    else throw new Error('unexpected update action '+act);
+    return {ok:true,status:200,text:async()=>JSON.stringify(result)};
+  }
   const body=init.body?JSON.parse(init.body):undefined;
   requests.push({act,body});
   let result={};
@@ -107,7 +116,7 @@ function setup(input, opts={}){
  vm.createContext(context);
  vm.runInContext(script,context,{filename:'app.js'});
  const settle=()=>new Promise(ok=>setTimeout(ok,0));
- return {elements,requests,writes,reads,settle,context,readState:()=>vm.runInContext('cfg',context),
+ return {elements,requests,updateRequests,writes,reads,settle,context,readState:()=>vm.runInContext('cfg',context),
          getDirty:()=>elements.dirtyText.textContent==='Ungespeicherte Änderungen.'};
 }
 function click(root,selector,index=0){
@@ -219,6 +228,28 @@ async function test(name,fn){
   env.elements.deviceDialog.close();
   env.elements.addDevice.onclick();
   assert.notEqual(env.elements.deviceDialog._working.id,'d1');
+ });
+ await test('update notice and button appear only for newer public version',async()=>{
+  const up=setup({schema:2,devices:[]},{latest:'0.3.5'});
+  await up.settle();
+  assert.match(up.elements.updateInfo.textContent,/0.3.5 verfügbar/);
+  assert.equal(up.elements.installUpdate.classList.contains('hidden'),false);
+  assert.equal(up.elements.installUpdate.disabled,false);
+  assert.deepEqual(up.updateRequests.map(x=>x.act),['check']);
+  await up.elements.installUpdate.onclick();await up.settle();
+  assert.ok(up.updateRequests.some(x=>x.act==='install'&&x.method==='POST'));
+  assert.ok(up.updateRequests.some(x=>x.act==='status'));
+  const current=setup({schema:2,devices:[]});await current.settle();
+  assert.equal(current.elements.installUpdate.classList.contains('hidden'),true);
+  assert.match(current.elements.updateInfo.textContent,/Aktuelle Version/);
+ });
+ await test('unsaved changes block updating',async()=>{
+  const env=setup({schema:2,devices:[makeDevice()]},{latest:'0.3.5'});await env.settle();
+  env.elements.addDevice.onclick();env.elements.dName.value='Test';
+  env.elements.dHost.value='192.0.2.5';env.elements.applyDevice.onclick();
+  assert.equal(env.getDirty(),true);
+  await env.elements.installUpdate.onclick();await env.settle();
+  assert.equal(env.updateRequests.some(x=>x.act==='install'),false);
  });
  if(!process.exitCode)console.log('UI_WORKFLOW_TESTS_PASS');
 })();

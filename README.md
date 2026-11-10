@@ -1,6 +1,6 @@
 # CCU-ModbusClient
 
-**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.3
+**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.4
 
 Eigenständiges Add-on, das Modbus-TCP-Geräte (z. B. SPS, I/O-Module, Zähler) in eine
 HomeMatic-Zentrale einbindet. Die eingestellte Software *CCU-Modbus* sowie deren Geräte, Daten
@@ -8,7 +8,7 @@ und Kennungen werden nicht übernommen.
 
 | | |
 |---|---|
-| Version | 0.3.3 |
+| Version | 0.3.4 |
 | Plattformen | Linux AMD64, ARM64, ARMv7 |
 | Lizenz | [CCU-ModbusClient-Lizenz 1.1](LICENSE) – kostenlos, auch gewerblich |
 | Sprache | Go 1.25.14, statisch gebaut |
@@ -99,6 +99,24 @@ Maßgeblich ist der vollständige Text in [LICENSE](LICENSE).
 Rechte Dritter: [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) und [third_party/licenses](third_party/licenses).
 
 ---
+
+## Änderungen in 0.3.4
+
+- **Aktualisierung direkt in der WebUI:** Die Versionsanzeige prüft beim
+  Öffnen den aktuellen Stand im öffentlichen GitHub-Repository. Nur wenn
+  eine neuere Version vorhanden ist, erscheinen deren Versionsnummer
+  und die Schaltfläche **„Jetzt aktualisieren“**.
+- **Ein-Knopf-Installation mit Sicherheitsprüfungen:** Erst nach ausdrücklicher
+  Bestätigung lädt die CCU das zum öffentlichen Versions-Tag passende
+  Installationsarchiv und die SHA-256-Prüfsumme über HTTPS. Vor dem Installieren
+  werden Versionsnummer und Prüfsumme geprüft sowie die bestehende Konfiguration,
+  Add-on-Dateien und Schnittstellenkonfiguration gesichert.
+- **Fortschrittsanzeige:** Die WebUI zeigt Download, Prüfung, Sicherung und
+  Installation an. Die vorhandenen Modbus-Geräte werden dabei nicht gelöscht.
+  Ohne Internetzugang oder bei fehlgeschlagener Prüfung wird kein Update angeboten.
+- **Wichtig:** Der Update-Button installiert ausschließlich eine neuere
+  veröffentlichte Version aus dem fest hinterlegten Projekt-Repository.
+  Das Update ersetzt keine Kontrolle sicherheitsrelevanter Anlagen.
 
 ## Änderungen in 0.3.3
 
@@ -204,7 +222,7 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 - `make build` erzeugt Daemon und Konfigurationswerkzeug für AMD64, ARM64 und ARMv7
   (`CGO_ENABLED=0`, `-trimpath`).
 - `make package` prüft die Quellen und erstellt beide Archive.
-- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.3`.
+- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.4`.
 
 ---
 
@@ -212,8 +230,8 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 
 | Archiv | Inhalt |
 |---|---|
-| `CCU-ModbusClient-0.3.3-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
-| `CCU-ModbusClient-0.3.3-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
+| `CCU-ModbusClient-0.3.4-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
+| `CCU-ModbusClient-0.3.4-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
 
 Fertige Archive liegen unter `releases/`, selbst gebaute unter `build/`.
 

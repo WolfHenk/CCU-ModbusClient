@@ -33,7 +33,7 @@ case "$1" in
     echo "Version: $(cat "$BASE/VERSION" 2>/dev/null)"
     echo "Info: <div style='text-align:center'>"
     echo "Info: <img src='/addons/ccu-modbusclient/img/modbus-logo.png' style='max-width:235px;max-height:70px;margin:2px 0 5px 0' alt='Modbus'><br>"
-    echo 'Info: <b>CCU-ModbusClient 0.3.3</b><br>'
+    echo 'Info: <b>CCU-ModbusClient 0.3.4</b><br>'
     echo 'Info: Modbus-TCP-Client fuer CCU/OpenCCU<br><br>'
     echo "Info: <a href='https://github.com/WolfHenk/CCU-ModbusClient' target='_blank'>GitHub: CCU-ModbusClient</a>"
     echo 'Info: </div>'

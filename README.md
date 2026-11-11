@@ -105,6 +105,7 @@ Rechte Dritter: [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) und [third_party/lice
 - **Feste CCU-Kanalnummern.** Jedes Register behält seine Kanalnummer (`:n` des CCU-Geräts) dauerhaft. Hinzufügen, Löschen, Deaktivieren oder Umsortieren verschiebt keine anderen Kanäle mehr; ReGa-Programme und Verknüpfungen behalten ihre Bedeutung. Bisher wurden erst alle Binär-, dann alle Zahlenregister durchnummeriert, so dass ein neu hinzugefügtes Binärregister alle Zahlenkanäle verschob.
 - Neue Register bekommen die nächste freie Nummer hinter allen bisher vergebenen; Nummern gelöschter Register werden nicht wiederverwendet. Deaktivierte Register lassen ihre Nummer frei.
 - Bestehende Konfigurationen übernehmen beim Update genau die Nummerierung, die die CCU schon kennt.
+- Nach einem Start wird der erste gültige Wert jedes Datenpunkts immer an die CCU gemeldet, auch wenn er dem Startwert (0 bzw. aus) entspricht. Bisher konnte die CCU dann einen veralteten Wert behalten.
 - Reparatur nach einer Umnummerierung durch 0.3.6: `ccu-modbusclient-config adopt-channels /usr/local/etc/config/addons/ccu-modbusclient/config.json <ältere-config.json>` übernimmt die Kanalnummern aus einer älteren Kopie der Konfiguration.
 
 ## Änderungen in 0.3.6

@@ -95,3 +95,38 @@ func TestStableChannelsEndToEnd(t *testing.T) {
 		t.Fatalf("routes %v", routes)
 	}
 }
+
+// Regression (test CCU 2026-11-11 18:53): after the renumbering, channel
+// :11 kept a value of its earlier meaning in ReGa because the first read
+// (0) equalled the catalog default and no event was sent.
+func TestFirstValueIsAlwaysPublished(t *testing.T) {
+	cfg := &config.Config{Devices: []config.Device{{ID: "x", Enabled: true, CCUAddress: "MB001002502001", Registers: []config.Register{
+		{ID: "hr", Enabled: true, Type: "holding", DataType: "float32", NumericDirection: "output", Channel: 1},
+		{ID: "di", Enabled: true, Type: "discrete", DataType: "bool", Channel: 2},
+	}}}}
+	c, err := CatalogFromConfig(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap := model.DeviceState{ID: "x", State: "ONLINE", Registers: []model.RegisterState{
+		{ID: "hr", Value: model.Value{Quality: model.QualityGood, Value: 0.0}},
+		{ID: "di", Value: model.Value{Quality: model.QualityGood, Value: false}},
+	}}
+	if err := c.ApplySnapshot(cfg, []model.DeviceState{snap}); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, e := range c.DrainEvents() {
+		got[e.Address+"."+e.Key] = true
+	}
+	key := numericChannelFor(cfg.Devices[0].Registers[0]).Key
+	if !got["MB001002502001:1."+key] || !got["MB001002502001:2.STATE"] || !got["MB001002502001:0.UNREACH"] {
+		t.Fatalf("first values not published: %v", got)
+	}
+	if err := c.ApplySnapshot(cfg, []model.DeviceState{snap}); err != nil {
+		t.Fatal(err)
+	}
+	if ev := c.DrainEvents(); len(ev) != 0 {
+		t.Fatalf("unchanged values published again: %+v", ev)
+	}
+}

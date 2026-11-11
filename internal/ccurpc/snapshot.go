@@ -64,8 +64,10 @@ func (c *MemoryCatalog) ApplySnapshot(cfg *config.Config, states []model.DeviceS
 			}
 			for j := range ch.Points {
 				if ch.Points[j].ID == key {
-					if ch.Points[j].Read && ch.Points[j].Event && !reflect.DeepEqual(ch.Points[j].Value, v) {
+					id := chAddr + "." + key
+					if ch.Points[j].Read && ch.Points[j].Event && (!c.published[id] || !reflect.DeepEqual(ch.Points[j].Value, v)) {
 						c.pending = append(c.pending, PointEvent{Address: chAddr, Key: key, Value: v})
+						c.published[id] = true
 					}
 					ch.Points[j].Value = v
 					break

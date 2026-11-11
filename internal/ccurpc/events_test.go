@@ -35,8 +35,16 @@ func TestSnapshotEventChangesOnly(t *testing.T) {
 	if err := c.ApplySnapshot(cfg, []model.DeviceState{snap}); err != nil {
 		t.Fatal(err)
 	}
+	// The first update also publishes the maintenance channel once (its
+	// first values); the data channel must carry the new state.
 	ev := c.DrainEvents()
-	if len(ev) != 1 || ev[0].Address != "MB001002502001:1" || ev[0].Key != "STATE" || ev[0].Value.Text != "1" {
+	var data []PointEvent
+	for _, e := range ev {
+		if e.Address != "MB001002502001:0" {
+			data = append(data, e)
+		}
+	}
+	if len(data) != 1 || data[0].Address != "MB001002502001:1" || data[0].Key != "STATE" || data[0].Value.Text != "1" {
 		t.Fatalf("first update: %+v", ev)
 	}
 	if err := c.ApplySnapshot(cfg, []model.DeviceState{snap}); err != nil {

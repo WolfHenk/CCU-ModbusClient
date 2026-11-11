@@ -57,10 +57,15 @@ type MemoryCatalog struct {
 	devices  map[string]Device
 	channels map[string]Channel
 	pending  []PointEvent
+	// published holds "ADDR:n.KEY" of every point whose value was sent to
+	// the CCU since this catalog was built. The first good value is always
+	// sent, even if it equals the initial default: after a restart or a
+	// renumbering the CCU may still hold a value of an earlier meaning.
+	published map[string]bool
 }
 
 func NewMemoryCatalog() *MemoryCatalog {
-	return &MemoryCatalog{devices: make(map[string]Device), channels: make(map[string]Channel)}
+	return &MemoryCatalog{devices: make(map[string]Device), channels: make(map[string]Channel), published: make(map[string]bool)}
 }
 func (c *MemoryCatalog) AddDevice(d Device) error {
 	if c == nil || d.Address == "" || strings.Contains(d.Address, ":") || d.Type == "" {

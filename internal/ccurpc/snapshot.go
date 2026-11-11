@@ -88,21 +88,15 @@ func (c *MemoryCatalog) ApplySnapshot(cfg *config.Config, states []model.DeviceS
 		for _, rs := range ds.Registers {
 			byReg[rs.ID] = rs
 		}
-		binaries := make([]config.Register, 0)
-		numerics := make([]config.Register, 0)
-		for _, r := range d.Registers {
-			if !r.Enabled {
+		for _, pc := range channelPlan(d) {
+			r, index := pc.Reg, pc.Index
+			rs, ok := byReg[r.ID]
+			if !pc.Binary {
+				if ok && rs.Value.Quality == model.QualityGood {
+					applyNumeric(update, r, index, rs)
+				}
 				continue
 			}
-			if strings.EqualFold(r.DataType, "bool") && (r.Type == "coil" || r.Type == "discrete") {
-				binaries = append(binaries, r)
-			} else if r.Type == "holding" || r.Type == "input" {
-				numerics = append(numerics, r)
-			}
-		}
-		index := 1
-		for _, r := range binaries {
-			rs, ok := byReg[r.ID]
 			if ok && rs.Value.Quality == model.QualityGood {
 				if v, ok := rs.Value.Value.(bool); ok {
 					if r.Type == "discrete" || r.CoilDirection == "input" {
@@ -113,29 +107,26 @@ func (c *MemoryCatalog) ApplySnapshot(cfg *config.Config, states []model.DeviceS
 					update(index, "STATE", Boolean(v))
 				}
 			}
-			index++
-		}
-		for _, r := range numerics {
-			rs, ok := byReg[r.ID]
-			if ok && rs.Value.Quality == model.QualityGood {
-				nc := numericChannelFor(r)
-				switch v := rs.Value.Value.(type) {
-				case float64:
-					if !math.IsNaN(v) && !math.IsInf(v, 0) {
-						if nc.DataType == "INTEGER" {
-							update(index, nc.Key, Integer(int(math.Round(v))))
-						} else {
-							update(index, nc.Key, Value{Kind: "double", Text: strconv.FormatFloat(v, 'g', -1, 64)})
-						}
-					}
-				case string:
-					if r.DataType == "uint64" || r.DataType == "int64" {
-						update(index, nc.Key, String(v))
-					}
-				}
-			}
-			index++
 		}
 	}
 	return nil
+}
+
+// applyNumeric publishes one good numeric register value.
+func applyNumeric(update func(int, string, Value), r config.Register, index int, rs model.RegisterState) {
+	nc := numericChannelFor(r)
+	switch v := rs.Value.Value.(type) {
+	case float64:
+		if !math.IsNaN(v) && !math.IsInf(v, 0) {
+			if nc.DataType == "INTEGER" {
+				update(index, nc.Key, Integer(int(math.Round(v))))
+			} else {
+				update(index, nc.Key, Value{Kind: "double", Text: strconv.FormatFloat(v, 'g', -1, 64)})
+			}
+		}
+	case string:
+		if r.DataType == "uint64" || r.DataType == "int64" {
+			update(index, nc.Key, String(v))
+		}
+	}
 }

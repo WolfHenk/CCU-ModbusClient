@@ -26,7 +26,6 @@ import (
 	"github.com/WolfHenk/CCU-ModbusClient/internal/config"
 	"math"
 	"strconv"
-	"strings"
 )
 
 // WriteQueue implements the engine's existing validated write enqueue API.
@@ -74,30 +73,17 @@ func buildWriteRoutes(cfg *config.Config) (map[string]writeRoute, error) {
 			return nil, fmt.Errorf("device %s requires identity migration", d.ID)
 		}
 		serial = normalizedClientSerial(d.CCUAddress, serial)
-		idx := 1
-		binary := make([]config.Register, 0)
-		numeric := make([]config.Register, 0)
-		for _, r := range d.Registers {
-			if !r.Enabled {
+		for _, pc := range channelPlan(d) {
+			r, idx := pc.Reg, pc.Index
+			if pc.Binary {
+				if r.Type == "coil" && r.CoilDirection != "input" {
+					routes[fmt.Sprintf("%s:%d.STATE", serial, idx)] = writeRoute{d.ID, r.ID, "bool"}
+				}
 				continue
 			}
-			if strings.EqualFold(r.DataType, "bool") && (r.Type == "coil" || r.Type == "discrete") {
-				binary = append(binary, r)
-			} else if r.Type == "holding" || r.Type == "input" {
-				numeric = append(numeric, r)
-			}
-		}
-		for _, r := range binary {
-			if r.Type == "coil" && r.CoilDirection != "input" {
-				routes[fmt.Sprintf("%s:%d.STATE", serial, idx)] = writeRoute{d.ID, r.ID, "bool"}
-			}
-			idx++
-		}
-		for _, r := range numeric {
 			if r.Type == "holding" && r.NumericDirection == "output" && r.DataType != "uint64" && r.DataType != "int64" {
 				routes[fmt.Sprintf("%s:%d.%s", serial, idx, numericChannelFor(r).Key)] = writeRoute{d.ID, r.ID, "numeric"}
 			}
-			idx++
 		}
 	}
 	return routes, nil

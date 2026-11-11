@@ -46,6 +46,9 @@ type Device struct {
 	TimeoutMS  int        `json:"timeout_ms"`
 	Retries    int        `json:"retries"`
 	Registers  []Register `json:"registers"`
+	// NextChannel is the next CCU channel number to hand out; numbers
+	// below it are taken or retired (see channels.go).
+	NextChannel int `json:"ccu_next_channel,omitempty"`
 }
 
 type Register struct {
@@ -67,6 +70,8 @@ type Register struct {
 	Measurement      string  `json:"measurement,omitempty"`
 	TrueMeansOpen    bool    `json:"true_means_open,omitempty"`
 	InvertInput      bool    `json:"invert_input,omitempty"`
+	// Channel is the stable CCU channel number (":n"), see channels.go.
+	Channel int `json:"ccu_channel,omitempty"`
 }
 
 func Load(path string) (*Config, error) {
@@ -79,6 +84,7 @@ func Load(path string) (*Config, error) {
 		return nil, err
 	}
 	ApplyDefaults(&c)
+	EnsureAllChannels(&c) // files without numbers: legacy numbering
 	return &c, nil
 }
 
@@ -103,6 +109,12 @@ func WriteAtomic(path string, c *Config) error {
 	ApplyDefaults(c)
 	if errs := Validate(c); len(errs) > 0 {
 		return errs[0]
+	}
+	EnsureAllChannels(c)
+	for _, d := range c.Devices {
+		if err := ValidateChannels(d); err != nil {
+			return fmt.Errorf("%s: %w", d.Name, err)
+		}
 	}
 	b, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {

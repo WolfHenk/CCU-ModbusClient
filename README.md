@@ -1,6 +1,6 @@
 # CCU-ModbusClient
 
-**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.6
+**Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.7
 
 Eigenständiges Add-on, das Modbus-TCP-Geräte (z. B. SPS, I/O-Module, Zähler) in eine
 HomeMatic-Zentrale einbindet. Die eingestellte Software *CCU-Modbus* sowie deren Geräte, Daten
@@ -8,7 +8,7 @@ und Kennungen werden nicht übernommen.
 
 | | |
 |---|---|
-| Version | 0.3.6 |
+| Version | 0.3.7 |
 | Plattformen | Linux AMD64, ARM64, ARMv7 |
 | Lizenz | [CCU-ModbusClient-Lizenz 1.1](LICENSE) – kostenlos, auch gewerblich |
 | Sprache | Go 1.25.14, statisch gebaut |
@@ -99,6 +99,13 @@ Maßgeblich ist der vollständige Text in [LICENSE](LICENSE).
 Rechte Dritter: [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) und [third_party/licenses](third_party/licenses).
 
 ---
+
+## Änderungen in 0.3.7
+
+- **Feste CCU-Kanalnummern.** Jedes Register behält seine Kanalnummer (`:n` des CCU-Geräts) dauerhaft. Hinzufügen, Löschen, Deaktivieren oder Umsortieren verschiebt keine anderen Kanäle mehr; ReGa-Programme und Verknüpfungen behalten ihre Bedeutung. Bisher wurden erst alle Binär-, dann alle Zahlenregister durchnummeriert, so dass ein neu hinzugefügtes Binärregister alle Zahlenkanäle verschob.
+- Neue Register bekommen die nächste freie Nummer hinter allen bisher vergebenen; Nummern gelöschter Register werden nicht wiederverwendet. Deaktivierte Register lassen ihre Nummer frei.
+- Bestehende Konfigurationen übernehmen beim Update genau die Nummerierung, die die CCU schon kennt.
+- Reparatur nach einer Umnummerierung durch 0.3.6: `ccu-modbusclient-config adopt-channels /usr/local/etc/config/addons/ccu-modbusclient/config.json <ältere-config.json>` übernimmt die Kanalnummern aus einer älteren Kopie der Konfiguration.
 
 ## Änderungen in 0.3.6
 
@@ -237,7 +244,7 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 - `make build` erzeugt Daemon und Konfigurationswerkzeug für AMD64, ARM64 und ARMv7
   (`CGO_ENABLED=0`, `-trimpath`).
 - `make package` prüft die Quellen und erstellt beide Archive.
-- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.6`.
+- Kontrolle: `ccu-modbusclientd -version` und `ccu-modbusclient-config -version` melden `0.3.7`.
 
 ---
 
@@ -245,8 +252,8 @@ make GO=/pfad/zur/go1.25.14/bin/go package   # Installations- und Quellarchiv
 
 | Archiv | Inhalt |
 |---|---|
-| `CCU-ModbusClient-0.3.6-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
-| `CCU-ModbusClient-0.3.6-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
+| `CCU-ModbusClient-0.3.7-INSTALL.tar.gz` | Binaries, WebUI, Skripte, Konfigurationsvorlage, README, Lizenzen, kompletter Quellcode unter `source/` |
+| `CCU-ModbusClient-0.3.7-SOURCE.tar.gz` | Quellcode mit Bauanleitung und Lizenztexten |
 
 Fertige Archive liegen unter `releases/`, selbst gebaute unter `build/`.
 

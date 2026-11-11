@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -153,11 +154,12 @@ func deviceDescription(d Device) Value {
 	return localVirtualAttributes(Struct(map[string]Value{"PARENT_TYPE": String(""), "ADDRESS": String(d.Address), "TYPE": String(d.Type), "CHILDREN": Array(children...), "PARENT": String(""), "INDEX": Integer(0), "FLAGS": Integer(1), "DIRECTION": Integer(0), "RX_MODE": Integer(0), "INTERFACE": String(""), "VERSION": Integer(1), "PARAMSETS": Array(String("MASTER"))}))
 }
 func channelDescription(d Device, ch Channel) Value {
+	// INDEX is the channel number of the address ("ADDR:n"), not the
+	// position in the list: stable numbers may leave gaps.
 	idx := 0
-	for i, c := range d.Channels {
-		if c.Address == ch.Address {
-			idx = i
-			break
+	if p := strings.LastIndexByte(ch.Address, ':'); p >= 0 {
+		if n, err := strconv.Atoi(ch.Address[p+1:]); err == nil {
+			idx = n
 		}
 	}
 	return localVirtualAttributes(Struct(map[string]Value{"ADDRESS": String(ch.Address), "TYPE": String(ch.Type), "PARENT": String(d.Address), "PARENT_TYPE": String(d.Type), "INDEX": Integer(idx), "CHILDREN": Array(), "PARAMSETS": Array(String("MASTER"), String("VALUES")), "VERSION": Integer(max(1, ch.Version)), "FLAGS": Integer(func() int {

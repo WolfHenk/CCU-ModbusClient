@@ -30,7 +30,7 @@ import (
 	"path/filepath"
 )
 
-var version = "0.3.6"
+var version = "0.3.7"
 
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "-version" {
@@ -70,8 +70,16 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 		result := engine.TestRegister(req.Device, req.Register)
 		return json.NewEncoder(stdout).Encode(result)
 	}
+	// adopt-channels CONFIG REFERENCE: one-off repair after channels were
+	// renumbered by a version before stable channel numbers. Registers take
+	// the channel numbers they have in REFERENCE (an older copy of the
+	// configuration); registers not in it are numbered after them.
+	reference := ""
+	if len(args) == 3 && args[0] == "adopt-channels" {
+		reference, args = args[2], args[:2]
+	}
 	if len(args) != 2 {
-		return fmt.Errorf("usage: ccu-modbusclient-config read|write /absolute/path/config.json")
+		return fmt.Errorf("usage: ccu-modbusclient-config read|write /absolute/path/config.json | adopt-channels /absolute/path/config.json reference.json")
 	}
 	action, path := args[0], args[1]
 	if path != "/usr/local/etc/config/addons/ccu-modbusclient/config.json" && os.Getenv("CCU_MODBUSCLIENT_CONFIG_TEST") == "" {
@@ -133,11 +141,58 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 				return fmt.Errorf("device %s: changing serial is prohibited", d.ID)
 			}
 		}
+		// CCU channel numbers come from the saved file, never from the page
+		config.AssignChannels(assigned, old)
 		if err := config.WriteAtomic(path, assigned); err != nil {
 			return err
 		}
 		_, err = fmt.Fprintln(stdout, "OK")
 		return err
+	case "adopt-channels":
+		if reference == "" {
+			return fmt.Errorf("adopt-channels needs a reference configuration")
+		}
+		cur, err := config.Load(path)
+		if err != nil {
+			return err
+		}
+		ref, err := config.Load(reference)
+		if err != nil {
+			return fmt.Errorf("reference: %w", err)
+		}
+		known := map[string]bool{}
+		for _, d := range ref.Devices {
+			known[d.ID] = true
+		}
+		before := map[string]int{}
+		for _, d := range cur.Devices {
+			if !known[d.ID] {
+				return fmt.Errorf("device %s is not in the reference", d.ID)
+			}
+			for _, r := range d.Registers {
+				before[d.ID+"/"+r.ID] = r.Channel
+			}
+		}
+		config.AssignChannels(cur, ref)
+		if err := config.WriteAtomic(path, cur); err != nil {
+			return err
+		}
+		type change struct {
+			Device   string `json:"device"`
+			Register string `json:"register"`
+			Name     string `json:"name"`
+			From     int    `json:"from"`
+			To       int    `json:"to"`
+		}
+		changes := []change{}
+		for _, d := range cur.Devices {
+			for _, r := range d.Registers {
+				if b := before[d.ID+"/"+r.ID]; b != r.Channel {
+					changes = append(changes, change{d.ID, r.ID, r.Name, b, r.Channel})
+				}
+			}
+		}
+		return json.NewEncoder(stdout).Encode(changes)
 	default:
 		return fmt.Errorf("unknown action")
 	}

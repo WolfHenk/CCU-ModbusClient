@@ -28,8 +28,8 @@ if {![check_session $sid]} {
 }
 puts {<!doctype html>}
 puts {<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">}
-puts {<title>CCU-ModbusClient</title><link rel="stylesheet" href="style.css?v=0.3.6-ui1"></head><body>}
-puts {<header class="top"><div><img src="img/modbus-logo.png" class="logo" alt="Modbus"></div><div><h1>CCU-ModbusClient</h1><div class="sub">Modbus TCP Client für CCU/OpenCCU</div></div><div class="version"><div>Version <strong>0.3.6</strong></div><div id="updateInfo" class="updateInfo" role="status">Prüfe auf Aktualisierungen…</div><button type="button" id="installUpdate" class="primary hidden">Jetzt aktualisieren</button></div></header>}
+puts {<title>CCU-ModbusClient</title><link rel="stylesheet" href="style.css?v=0.3.7-ui1"></head><body>}
+puts {<header class="top"><div><img src="img/modbus-logo.png" class="logo" alt="Modbus"></div><div><h1>CCU-ModbusClient</h1><div class="sub">Modbus TCP Client für CCU/OpenCCU</div></div><div class="version"><div>Version <strong>0.3.7</strong></div><div id="updateInfo" class="updateInfo" role="status">Prüfe auf Aktualisierungen…</div><button type="button" id="installUpdate" class="primary hidden">Jetzt aktualisieren</button></div></header>}
 puts {<main><div id="notice" class="notice hidden"></div>}
 puts {<section class="toolbar"><div><h2>Modbus-TCP-Geräte</h2><div class="hint">Geräte und Register werden lokal auf der CCU gespeichert.</div></div><button id="addDevice" class="primary">+ Gerät hinzufügen</button></section>}
 puts {<div id="devices" class="devices"><div class="empty">Lade Konfiguration…</div></div>}
@@ -50,4 +50,4 @@ puts {<p class="precision-hint" id="precisionHint" hidden>INT64 / UINT64 werden 
 puts {<div class="seriesbox"><label class="check"><input id="rSeries" type="checkbox"> Registerserie anlegen</label><label id="rSeriesCountWrap" style="display:none">Gesamtanzahl<input id="rSeriesCount" type="number" min="2" max="256" value="2"></label></div><details><summary>Erweitert</summary><div class="grid advanced"><label class="check"><input id="rByteSwap" type="checkbox"> Byte-Swap</label><label class="check"><input id="rWordSwap" type="checkbox"> Word-Swap (16-Bit-Wörter)</label><label class="check"><input id="rDWordSwap" type="checkbox"> DWord-Swap (32-Bit-Hälften, 64 Bit)</label><label class="check"><input id="rTrueMeansOpen" type="checkbox"> True bedeutet offen</label><label class="check" id="rInvertInputWrap" style="display:none"><input id="rInvertInput" type="checkbox"> Eingangszustand in der CCU umkehren (1 ↔ 0)</label></div></details>}
 puts {<div class="testline"><button type="button" id="testRegister">Register lesen / Wert testen</button><span id="registerResult" role="status"></span></div>}
 puts {<div class="dialogactions"><button type="button" id="deleteRegister" class="danger">Register löschen</button><span class="spacer"></span><button value="cancel">Abbrechen</button><button type="button" id="applyRegister" class="primary">Übernehmen</button></div></form></dialog>}
-puts {<script src="app.js?v=0.3.6-ui1"></script></body></html>}
+puts {<script src="app.js?v=0.3.7-ui1"></script></body></html>}

@@ -49,37 +49,25 @@ func CatalogFromConfig(cfg *config.Config) (*MemoryCatalog, error) {
 			{ID: "MODBUS_ERROR", Type: "INTEGER", Value: Integer(0), Read: true, Event: true, Flags: 9, Default: intValue(0), Minimum: intValue(0), Maximum: intValue(0xFF0B)},
 			{ID: "MODBUS_EXCEPTION", Type: "BOOL", Value: Boolean(false), Read: true, Event: true, Flags: 9, Default: boolValue(false), Minimum: boolValue(false), Maximum: boolValue(true)},
 			InstallTestPoint(), {ID: "STICKY_UNREACH", Type: "BOOL", Value: Boolean(false), Read: true, Write: true, Event: true, Flags: 25, Default: boolValue(false), Minimum: boolValue(false), Maximum: boolValue(true)}}}}
-		binaryRegs := make([]config.Register, 0)
-		numericRegs := make([]config.Register, 0)
-		for _, r := range d.Registers {
-			if !r.Enabled {
+		// stable channel numbers: see channelPlan and config/channels.go
+		for _, pc := range channelPlan(d) {
+			r := pc.Reg
+			if pc.Binary {
+				var typ string
+				var writable bool
+				if r.Type == "coil" && r.CoilDirection != "input" {
+					typ = "SWITCH"
+					writable = true
+				} else {
+					typ = "DIGITAL_INPUT"
+				}
+				control := "SWITCH_TRANSMITTER.STATE"
+				if writable {
+					control = "SWITCH.STATE"
+				}
+				channels = append(channels, Channel{Address: fmt.Sprintf("%s:%d", address, pc.Index), Type: typ, Points: []Point{{ID: "STATE", Type: "BOOL", Value: Boolean(false), Read: true, Write: writable, Event: true, Flags: 1, Control: control, Default: boolValue(false), Minimum: boolValue(false), Maximum: boolValue(true)}, InstallTestPoint()}})
 				continue
 			}
-			if strings.EqualFold(r.DataType, "bool") && (r.Type == "coil" || r.Type == "discrete") {
-				binaryRegs = append(binaryRegs, r)
-				continue
-			}
-			if r.Type == "holding" || r.Type == "input" {
-				numericRegs = append(numericRegs, r)
-			}
-		}
-		for _, r := range binaryRegs {
-			var typ string
-			var writable bool
-			if r.Type == "coil" && r.CoilDirection != "input" {
-				typ = "SWITCH"
-				writable = true
-			} else {
-				typ = "DIGITAL_INPUT"
-			}
-			control := "SWITCH_TRANSMITTER.STATE"
-			if writable {
-				control = "SWITCH.STATE"
-			}
-			idx := len(channels)
-			channels = append(channels, Channel{Address: fmt.Sprintf("%s:%d", address, idx), Type: typ, Points: []Point{{ID: "STATE", Type: "BOOL", Value: Boolean(false), Read: true, Write: writable, Event: true, Flags: 1, Control: control, Default: boolValue(false), Minimum: boolValue(false), Maximum: boolValue(true)}, InstallTestPoint()}})
-		}
-		for _, r := range numericRegs {
 			nc := numericChannelFor(r)
 			point := Point{ID: nc.Key, Type: nc.DataType, Unit: r.Unit, Value: String(""), Read: true, Write: nc.Writable, Event: true, Flags: 1}
 			switch nc.DataType {
@@ -106,7 +94,7 @@ func CatalogFromConfig(cfg *config.Config) (*MemoryCatalog, error) {
 					}
 				}
 			}
-			ch := Channel{Address: fmt.Sprintf("%s:%d", address, len(channels)), Type: nc.Type, Points: []Point{point}}
+			ch := Channel{Address: fmt.Sprintf("%s:%d", address, pc.Index), Type: nc.Type, Points: []Point{point}}
 			channels = append(channels, ch)
 		}
 		if err := result.AddDevice(Device{Address: address, Type: "Modbus", Channels: channels}); err != nil {

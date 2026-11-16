@@ -2,6 +2,8 @@
 
 **Modbus-TCP-Client für CCU/OpenCCU** · Version 0.3.6
 
+**⬇️ [Installationspaket 0.3.6 direkt herunterladen (26,7 MB)](https://raw.githubusercontent.com/WolfHenk/CCU-ModbusClient/v0.3.6/releases/CCU-ModbusClient-0.3.6-INSTALL.tar.gz)** · [Installationsanleitung](#installation-und-direktdownload)
+
 Eigenständiges Add-on, das Modbus-TCP-Geräte (z. B. SPS, I/O-Module, Zähler) in eine
 HomeMatic-Zentrale einbindet. Die eingestellte Software *CCU-Modbus* sowie deren Geräte, Daten
 und Kennungen werden nicht übernommen.
@@ -252,9 +254,22 @@ Fertige Archive liegen unter `releases/`, selbst gebaute unter `build/`.
 
 ---
 
-## Installation
+## Installation und Direktdownload
 
-Installation als Zusatzsoftware über die WebUI der OpenCCU; die passende Architektur wählen.
+**[CCU-ModbusClient 0.3.6 – Installationspaket direkt herunterladen (25,5 MiB)](https://raw.githubusercontent.com/WolfHenk/CCU-ModbusClient/v0.3.6/releases/CCU-ModbusClient-0.3.6-INSTALL.tar.gz)**
+
+Diese Datei heißt **`CCU-ModbusClient-0.3.6-INSTALL.tar.gz`** und ist **26.690.510 Byte** groß.
+Nur dieses Archiv bei *Einstellungen → Systemsteuerung → Zusatzsoftware* auf der CCU zur Installation auswählen. Das deutlich kleinere Archiv **`CCU-ModbusClient-0.3.6-SOURCE.tar.gz`** (158.349 Byte) enthält ausschließlich den Quellcode und ist **kein Installationspaket**.
+
+SHA-256 des richtigen Installationsarchivs:
+
+```text
+b7a698c53379136232e578a9ffe888ba4ef4e1d3613d049efedb198e131c4d9b
+```
+
+**Fehler 102 beim Installieren:** Die CCU konnte das übertragene Archiv nicht entpacken. Kontrollieren, ob wirklich das vollständige Installationspaket (und keine HTML-Seite, das kleine Quellcodearchiv oder ein abgebrochener Download) vorliegt. Als weitere Ursache kommt unzureichender freier Speicherplatz auf der CCU infrage. Nicht wiederholt dieselbe fehlerhafte Datei hochladen.
+
+Das GitHub-Unterverzeichnis `releases/` ist derzeit **kein** GitHub-Release mit Download-Assets. Der oben stehende Link führt deshalb unmittelbar zur richtigen Datei; der Umweg über die GitHub-Dateiansicht entfällt.
 
 ---
 
